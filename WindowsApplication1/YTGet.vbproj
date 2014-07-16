@@ -144,6 +144,12 @@
     </Compile>
     <Compile Include="core\Klassen\INIDatei.vb" />
     <Compile Include="core\Klassen\Downloader.vb" />
+    <Compile Include="ManageMyCollection.Designer.vb">
+      <DependentUpon>ManageMyCollection.vb</DependentUpon>
+    </Compile>
+    <Compile Include="ManageMyCollection.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="My Project\AssemblyInfo.vb" />
     <Compile Include="My Project\Application.Designer.vb">
       <AutoGen>True</AutoGen>
@@ -179,6 +185,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Download_Mgr.resx">
       <DependentUpon>Download_Mgr.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ManageMyCollection.resx">
+      <DependentUpon>ManageMyCollection.vb</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="My Project\Resources.resx">
       <Generator>VbMyResourcesResXFileCodeGenerator</Generator>

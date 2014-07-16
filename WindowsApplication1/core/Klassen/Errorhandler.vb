@@ -1,25 +1,30 @@
 ﻿Imports System.IO
 
-Public Class Errorhandler
-    Public Event Show_Exception(ByVal ex_msg As String)
+Public Enum EventType As Integer
+    Debug = 0
+    information = 1
+    Warning = 2
+    Exception = 3
+End Enum
 
-	Public Function dumpLineToFile(ByVal line As String, ByVal key As String, ByVal expression As String) As String
-		Try
-			Dim streamw As New StreamWriter("exception_" & My.Computer.Clock.LocalTime.Date.Day.ToString & "_" & My.Computer.Clock.LocalTime.Date.Hour.ToString & "_" & My.Computer.Clock.LocalTime.Date.Minute.ToString & "_" & key & ".txt", False)
+Public Class EventLog
+    Public Event GotEvent(ByVal src As String, ByVal type As String, ByVal Message As String, ByVal type_numeric As EventType)
 
-			streamw.WriteLine(line)
-			streamw.WriteLine(vbCrLf)
-			streamw.WriteLine(expression)
-			streamw.Flush()
-			streamw.Close()
+    Public Sub AddEvent(src As String, type As EventType, Message As String)
+        Dim _type As String = ""
 
-		Catch ex As Exception
-            ShowError(ex.Message)
-		End Try
-	End Function
+        Select Case type
+            Case EventType.Debug
+                _type = "Debug"
+            Case EventType.information
+                _type = "Info"
+            Case EventType.Warning
+                _type = "Warn"
+            Case EventType.Exception
+                _type = "Error"
+        End Select
 
-
-    Public Sub ShowError(ByVal exception As String) Handles Me.Show_Exception
-        MsgBox(exception, MsgBoxStyle.Critical, Download_Manager.Text)
+        RaiseEvent GotEvent(src, _type, Message, type)
     End Sub
 End Class
+

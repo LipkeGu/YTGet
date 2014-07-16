@@ -4,9 +4,9 @@ Public Class Main
     Public Event status(ByVal message As String)
 
     Public CleanReplace As New CleanReplace()
-    Public FileIO As New YTFileIO
+    Public WithEvents FileIO As New YTFileIO
     Public Collections As New Collections
-    Dim WithEvents Errorhandler As New Errorhandler
+    Public WithEvents Eventlog As New EventLog
 
     Public INIDatei As New INIDatei
     Public converter As New convert
@@ -258,6 +258,12 @@ Public Class Main
         Speicherort.Alignment = ToolStripItemAlignment.Right
         Speicherort.Size = New Size(300, Speicherort.Size.Height)
 
+        If Me.WindowState = FormWindowState.Minimized Then
+            NotifyIcon1.Visible = True
+        Else
+            NotifyIcon1.Visible = False
+        End If
+
         If ImportTo_Collection.Visible Then
             If Me.WindowState = FormWindowState.Maximized Then
                 ImportTo_Collection.WindowState = Me.WindowState
@@ -302,11 +308,15 @@ Public Class Main
     End Sub
 
     Private Sub DownloaderToolStripMenuItem1_Click(sender As Object, e As EventArgs) Handles DownloaderToolStripMenuItem1.Click
-        Download_Manager.Width = CInt((Me.Width / 2))
-        Download_Manager.Height = CInt((Me.Height / 2))
+        If Download_Manager IsNot Nothing Then
+            With Download_Manager
+                .Width = CInt((Me.Width / 2))
+                .Height = CInt((Me.Height / 2))
 
-        Download_Manager.MdiParent = Me
-        Download_Manager.Show()
+                .MdiParent = Me
+                .Show()
+            End With
+        End If
     End Sub
 
     Private Sub BeendenToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles BeendenToolStripMenuItem.Click
@@ -419,5 +429,44 @@ Public Class Main
 
     Private Sub BestandslisteErstellenToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles BestandslisteErstellenToolStripMenuItem.Click
         Collections.Bestandslisteerstellen()
+    End Sub
+
+
+    Private Sub Eventlog_GotEvent(src As String, type As String, Message As String, type_numeric As EventType) Handles Eventlog.GotEvent
+        Dim item As New ListViewItem
+        With item
+            If type_numeric = EventType.Warning Then
+                .BackColor = Color.Gold
+            ElseIf type_numeric = EventType.Exception Then
+                .BackColor = Color.Red
+            End If
+
+            .Text = CStr(ListView1.Items.Count + 1)
+            .SubItems.Add(src)
+            .SubItems.Add(type)
+            .SubItems.Add(Message)
+
+            ListView1.Items.Add(item)
+        End With
+
+        If Me.WindowState = FormWindowState.Minimized Then
+            NotifyIcon1.Visible = True
+        Else
+            NotifyIcon1.Visible = False
+        End If
+
+        If Me.WindowState = FormWindowState.Minimized Then
+            NotifyIcon1.ShowBalloonTip(3600, src, Message, CType(type_numeric, ToolTipIcon))
+        End If
+
+
+        ListView1.Update()
+        ListView1.Scrollable = True
+        ListView1.AutoArrange = True
+    End Sub
+
+    Private Sub VerwaltenToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles VerwaltenToolStripMenuItem.Click
+        ManageMyCollection.MdiParent = Me
+        ManageMyCollection.Show()
     End Sub
 End Class

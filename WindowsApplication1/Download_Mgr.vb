@@ -5,18 +5,19 @@ Imports System.Threading
 Public Class Download_Manager
 
     Public Event reportstate(ByVal message As String)
-    Public Error_Handler As New Errorhandler
+    Public Error_Handler As New EventLog
     Dim WithEvents Downloads As New Downloads
     Dim WithEvents ytlib As New Youtube_libary
+    Public WithEvents converter As New convert
     Dim download_active As Boolean = True
     Dim weitergehts As Boolean = False
     Dim ms As Integer = 1000
+    Public statusliste As New List(Of ProgressBar)
 
     Delegate Sub __ytlib_releaseButtons(ByVal actiona As Boolean)
 
     Public Sub _ytlib_releaseButtons(action As Boolean)
         Add_URL.Enabled = True
-        movie_url.Text = ""
     End Sub
 
     Delegate Sub __addlistitem(Video_Name As String, param2 As String, param3 As String, param4 As String, param5 As String, ByVal param6 As String)
@@ -115,6 +116,7 @@ Public Class Download_Manager
                 .Add(param2)
                 .Add(CStr(DL_Listview.Items.Count))
                 .Add("Bereit")
+
                 .Add(param3)
                 .Add(param4)
                 .Add(param5)
@@ -133,11 +135,36 @@ Public Class Download_Manager
         Else
             download.Enabled = True
         End If
-
+        statusliste.Add(AddProgressBar(DL_Listview, DL_Listview.Items.Count - 1, 3, False))
         DL_Listview.Refresh()
         movie_url.Text = ""
 
     End Sub
+
+
+    Public Function AddProgressBar(ByVal pListView As ListView, ByVal ItemIndex As Integer, ByVal ColumnIndex As Integer, Optional visible As Boolean = False) As ProgressBar
+        'pgrogressbar erstellen funktion
+        Dim r As Rectangle
+        Dim pb As New ProgressBar
+
+        r = pListView.Items(ItemIndex).SubItems(3).Bounds()
+        With r
+            .Location = DL_Listview.Items.Item(ItemIndex).SubItems(3).Bounds.Location
+            .Width = pListView.Items(ItemIndex).SubItems(3).Bounds().Width
+        End With
+
+        With pb
+            .Parent = pListView
+            .SetBounds(r.X, r.Y, r.Width, r.Height)
+            .Name = CStr("pb" & ItemIndex)
+            .Maximum = 100
+            .Value = 0
+            .Style = ProgressBarStyle.Continuous
+            .Visible = visible
+        End With
+
+        Return pb
+    End Function
 
     Private Sub ytlib_Content(ByVal param1 As String, ByVal param2 As String, ByVal param3 As String, ByVal param4 As String, ByVal param5 As String, param6 As String) Handles ytlib.Content
         If Me.InvokeRequired Then
@@ -187,8 +214,12 @@ Public Class Download_Manager
         Main.Speicherort.Enabled = True
     End Sub
 
-    Private Sub main_reportstate(message As String) Handles Me.reportstate
-        Main.StatusLabel1.Text = message
+    Private Sub DL_Listview_ColumnWidthChanging(sender As Object, e As ColumnWidthChangingEventArgs) Handles DL_Listview.ColumnWidthChanging
+
+        For i As Integer = 0 To DL_Listview.Items.Count - 1
+            CType(statusliste(i), ProgressBar).Location = DL_Listview.Items.Item(i).SubItems(3).Bounds.Location
+            CType(statusliste(i), ProgressBar).Width = DL_Listview.Items.Item(i).SubItems(3).Bounds.Width
+        Next
     End Sub
 
     Private Sub ListView1_SelectedIndexChanged(sender As Object, e As EventArgs) Handles DL_Listview.SelectedIndexChanged
@@ -251,12 +282,6 @@ Public Class Download_Manager
         End If
     End Sub
 
-    Private Sub Button10_Click(sender As Object, e As EventArgs) Handles ElementLöschenToolStripMenuItem.Click
-        If DL_Listview.FocusedItem IsNot Nothing Then
-            DL_Listview.FocusedItem.Remove()
-        End If
-    End Sub
-
     Private Sub NamenTrimmenToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles NamenTauschen1221ToolStripMenuItem.Click
         If DL_Listview.FocusedItem IsNot Nothing Then
             DL_Listview.FocusedItem.SubItems(0).Text = Trim(DL_Listview.FocusedItem.SubItems(0).Text)
@@ -272,6 +297,14 @@ Public Class Download_Manager
     Private Sub GewähltesElementToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles GewähltesElementToolStripMenuItem.Click
         If DL_Listview.Items.Count > 0 Then
             If DL_Listview.FocusedItem IsNot Nothing Then
+
+                If DL_Listview.FocusedItem.SubItems(3).Text = "Downloaden" Then
+                    Downloads.Cancel(DL_Listview.FocusedItem.Index)
+                End If
+
+                statusliste.Item(DL_Listview.FocusedItem.Index).Dispose()
+                statusliste.Remove(statusliste.Item(DL_Listview.FocusedItem.Index))
+
                 DL_Listview.FocusedItem.Remove()
 
                 If DL_Listview.CheckedIndices.Count < 1 Then
@@ -284,8 +317,18 @@ Public Class Download_Manager
     End Sub
 
     Private Sub GesamteListeToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles GesamteListeToolStripMenuItem.Click
+        If download_active = True Then
+            Downloads.Cancel()
+            Downloads.Current_Downloads.Clear()
+        End If
+
         DL_Listview.Items.Clear()
 
+        For Each ProgressBar In statusliste
+            ProgressBar.Dispose()
+        Next
+
+        statusliste.Clear()
         If DL_Listview.CheckedIndices.Count < 1 Then
             download.Enabled = False
         Else
@@ -298,15 +341,13 @@ Public Class Download_Manager
             For Each item As ListViewItem In DL_Listview.Items
                 If item IsNot Nothing And DL_Listview.Items.Contains(item) Then
                     If item.SubItems(3).Text = "Fertig" Then
+                        statusliste.Item(item.Index).Dispose()
+                        statusliste.Remove(statusliste.Item(item.Index))
                         item.Remove()
                     End If
                 End If
             Next
         End SyncLock
-    End Sub
-
-    Private Sub ytlib_Report(msg As String) Handles ytlib.Report
-        Main.StatusLabel1.Text = msg
     End Sub
 
     Private Sub InterpretZurArtistListeHinzufügenToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles InterpretZurArtistListeHinzufügenToolStripMenuItem.Click
@@ -319,9 +360,9 @@ Public Class Download_Manager
                 If Not settings.artist_pattern_list.Items.Contains(Trim(_tmp(0))) Then
                     settings.artist_pattern_list.Items.Add(Trim(_tmp(0)))
                     Main.CleanReplace.SaveRulelist3()
-                    MsgBox("Interpret " & Chr(34) & Trim(_tmp(0)) & Chr(34) & " erfolgreich hinzugefügt!", MsgBoxStyle.Information)
+                    Main.Eventlog.AddEvent("Settings", EventType.information, "Interpret " & Chr(34) & Trim(_tmp(0)) & Chr(34) & " erfolgreich hinzugefügt!")
                 Else
-                    MsgBox("Interpret " & Chr(34) & Trim(_tmp(0)) & Chr(34) & " bereits vorhanden!", MsgBoxStyle.Critical)
+                    Main.Eventlog.AddEvent("Settings", EventType.information, "Interpret " & Chr(34) & Trim(_tmp(0)) & Chr(34) & " bereits vorhanden!")
                 End If
             End If
         End If
@@ -330,43 +371,87 @@ Public Class Download_Manager
     Delegate Sub _respond_state(ByVal str As String, ByVal entryid As Integer)
 
     Public Sub respond_state(ByVal str As String, ByVal entryid As Integer)
-        If DL_Listview.Items.Item(entryid) IsNot Nothing Then
-            DL_Listview.Items.Item(entryid).SubItems(3).Text = str
+        If DL_Listview.Items.Contains(DL_Listview.Items.Item(entryid)) Then
+            If DL_Listview.Items.Item(entryid) IsNot Nothing Then
+                DL_Listview.Items.Item(entryid).SubItems(3).Text = str
+            End If
         End If
     End Sub
 
     Private Sub Downloads_Download_Abgebrochen(ref As Download) Handles Downloads.Download_Abgebrochen
-        If DL_Listview.Items.Item(ref.Id) IsNot Nothing Then
-            DL_Listview.Items.Item(ref.Id).SubItems(3).Text = "Abgebrochen!"
-        End If
+        If DL_Listview.Items.Contains(DL_Listview.Items.Item(ref.Id)) Then
+                If DL_Listview.Items.Item(ref.Id) IsNot Nothing Then
+                    DL_Listview.Items.Item(ref.Id).SubItems(3).Text = "Abgebrochen!"
 
-        cancel_all_downloads.Enabled = False
-        download.Enabled = True
+                    If statusliste.Contains(statusliste.Item(ref.Id)) Then
+                        statusliste.Item(ref.Id).Visible = False
+                    End If
+                End If
+            Else
+                Downloads.Remove(ref)
+            End If
+            cancel_all_downloads.Enabled = False
+            download.Enabled = True
     End Sub
 
     Private Sub Downloads_Download_begonnen(ref As Download) Handles Downloads.Download_begonnen
-        If DL_Listview.Items.Item(ref.Id) IsNot Nothing Then
-            DL_Listview.Items.Item(ref.Id).SubItems(3).Text = "starten..."
-        End If
+        SyncLock Main.lock
+            If DL_Listview.Items.Contains(DL_Listview.Items.Item(ref.Id)) Then
+                DL_Listview.Items.Item(ref.Id).SubItems(3).Text = "Downloaden"
+
+                For i As Integer = statusliste.Count - 1 To 0 Step 1
+                    If DL_Listview.Items.Item(i).SubItems(3).Text = "Downloaden" Then
+                        DL_Listview.Items.Item(ref.Id).SubItems(3).Text = "Fertig"
+
+                        If statusliste.Contains(statusliste.Item(ref.Id)) Then
+                            statusliste.Item(i).Visible = True
+                        End If
+                    End If
+                Next
+            Else
+                ref.Cancel_Download()
+            End If
+        End SyncLock
 
         cancel_all_downloads.Enabled = True
         download.Enabled = False
     End Sub
 
     Private Sub Downloads_Download_Fertig(ref As Download) Handles Downloads.Download_Fertig
-        If DL_Listview.Items.Item(ref.Id) IsNot Nothing Then
-            DL_Listview.Items.Item(ref.Id).SubItems(3).Text = "Fertig"
-        End If
+        SyncLock Main.lock
+                If DL_Listview.Items.Contains(DL_Listview.Items.Item(ref.Id)) Then
+                    For i As Integer = statusliste.Count - 1 To 0 Step 1
+                        If DL_Listview.Items.Item(i).SubItems(3).Text = "Downloaden" Then
+                            DL_Listview.Items.Item(ref.Id).SubItems(3).Text = "Fertig"
+
+                            If statusliste.Contains(statusliste.Item(i)) Then
+                                statusliste.Item(i).Visible = False
+                            End If
+                        End If
+                    Next
+                End If
+        End SyncLock
 
         cancel_all_downloads.Enabled = False
     End Sub
 
     Private Sub Downloads_Download_Fortschritt(Percent As Integer, current_bytes As Integer, total_bytes As Integer, ref As Download) Handles Downloads.Download_Fortschritt
         cancel_all_downloads.Enabled = True
+        SyncLock Main.lock
+            If DL_Listview.Items.Contains(DL_Listview.Items.Item(ref.Id)) Then
+                DL_Listview.Items.Item(ref.Id).SubItems(3).Text = "Downloaden"
 
-        If DL_Listview.Items.Item(ref.Id) IsNot Nothing Then
-            DL_Listview.Items.Item(ref.Id).SubItems(3).Text = "Downloaden (" & Percent & "%)"
-        End If
+                If DL_Listview.Items.Item(ref.Id).SubItems(3).Text = "Downloaden" Then
+                    If statusliste.Contains(statusliste.Item(ref.Id)) Then
+                        statusliste.Item(ref.Id).Visible = True
+                        statusliste.Item(ref.Id).Value = Percent
+                    End If
+                End If
+            Else
+                ref.Cancel_Download()
+            End If
+
+        End SyncLock
     End Sub
 
     Private Sub ToolStripButton1_Click(sender As Object, e As EventArgs) Handles Add_URL.Click
@@ -377,31 +462,39 @@ Public Class Download_Manager
                 ytlib.seiteAufrufen(movie_url.Text)
             End If
         Else
-            If movie_url.Text.Length < 3 Then Error_Handler.ShowError("Ungültige URL: " & movie_url.Text)
+            If movie_url.Text.Length < 3 Then Error_Handler.AddEvent("Download-Manager", EventType.Exception, "Ungültige URL: " & Chr(34) & movie_url.Text & Chr(34))
         End If
     End Sub
 
     Private Sub download_Click(sender As Object, e As EventArgs) Handles download.Click
+
         SyncLock Main.lock
             For i = 0 To DL_Listview.CheckedIndices.Count - 1
                 With DL_Listview.Items
-                    If .Item(i).SubItems(3).Text <> "Fertig" Then
-                        If Downloads.Aktelle_Downloads < Main.max_Downloads Then
-                            If .Item(i).SubItems(5).Text = "audio/mpeg" Then
-                                Downloads.Add_Download(.Item(i).SubItems(4).Text, Main.Dlpath & .Item(i).SubItems(0).Text & ".mp3", DL_Listview.CheckedIndices.Item(i))
-                            ElseIf .Item(i).SubItems(5).Text = "video/mp4" Then
-                                Downloads.Add_Download(.Item(i).SubItems(4).Text, Main.Dlpath & .Item(i).SubItems(0).Text & ".mp4", DL_Listview.CheckedIndices.Item(i))
+                    download_active = True
+                    If DL_Listview.Items.Contains(.Item(i)) Then
+                        If .Item(i).SubItems(3).Text = "Bereit" Then
+                            If Downloads.Aktelle_Downloads < Main.max_Downloads Then
+                                .Item(i).SubItems(3).Text = "Downloaden"
+
+                                If .Item(i).SubItems(5).Text = "audio/mpeg" Then
+
+                                    Downloads.Add_Download(.Item(i).SubItems(4).Text, Main.Dlpath & .Item(i).SubItems(0).Text & ".mp3", DL_Listview.CheckedIndices.Item(i))
+                                ElseIf .Item(i).SubItems(5).Text = "video/mp4" Then
+                                    Downloads.Add_Download(.Item(i).SubItems(4).Text, Main.Dlpath & .Item(i).SubItems(0).Text & ".mp4", DL_Listview.CheckedIndices.Item(i))
+                                Else
+                                    Downloads.Add_Download(.Item(i).SubItems(4).Text, Main.Dlpath & .Item(i).SubItems(0).Text, DL_Listview.CheckedIndices.Item(i))
+                                End If
                             Else
-                                Downloads.Add_Download(.Item(i).SubItems(4).Text, Main.Dlpath & .Item(i).SubItems(0).Text, DL_Listview.CheckedIndices.Item(i))
+                                i = i - 1
+                                wartezeit(1)
                             End If
-                        Else
-                            i = i - 1
-                            wartezeit(1)
                         End If
                     End If
                 End With
             Next
         End SyncLock
+        download_active = False
     End Sub
 
     Private Sub cancel_all_downloads_Click_1(sender As Object, e As EventArgs) Handles cancel_all_downloads.Click
@@ -424,7 +517,75 @@ Public Class Download_Manager
         End If
     End Sub
 
-    Private Sub Listview1_options_Opening(sender As Object, e As System.ComponentModel.CancelEventArgs) Handles Listview1_options.Opening
+    Private Sub convertcomplete(id As Integer)
+        SyncLock Main.lock
+            statusliste.Item(id).Visible = False
+        End SyncLock
+        Main.Eventlog.AddEvent("Konverter", EventType.information, "Konverter Beendet...")
+    End Sub
 
+    Private Sub converter_Completed(id As Integer) Handles converter.Completed
+        If Me.InvokeRequired = True Then
+            Me.Invoke(New _convertcomplete(AddressOf convertcomplete), id)
+        Else
+            convertcomplete(id)
+        End If
+    End Sub
+
+    Private Sub converter_GetDuration(duration As String, id As Integer) Handles converter.GetDuration
+        If Me.InvokeRequired = True Then
+            Me.Invoke(New _SetMaxval_pb(AddressOf SetMaxval_pb), duration, id)
+        Else
+            SetMaxval_pb(duration, id)
+        End If
+    End Sub
+
+    Delegate Sub _SetMaxval_pb(duration As String, id As Integer)
+    Delegate Sub _Setvaluel_pb(position As String, id As Integer)
+    Delegate Sub _convertcomplete(id As Integer)
+
+    Private Sub SetMaxval_pb(duration As String, id As Integer)
+        SyncLock Main.lock
+
+            Main.Eventlog.AddEvent("Konverter", EventType.information, "Konverter gestartet...")
+
+            If DL_Listview.Items.Item(id).SubItems(3).Text = "Konvertiere" Then
+                If statusliste.Contains(statusliste.Item(id)) Then
+                    With statusliste.Item(id)
+                        If .Visible = False Then
+                            .Visible = True
+                            .Minimum = 0
+                            .Value = 0
+                            .Maximum = CInt(duration)
+                        End If
+                    End With
+                End If
+            End If
+        End SyncLock
+    End Sub
+
+    Private Sub Setvalue_pb(position As String, id As Integer)
+        If DL_Listview.Items.Item(id).SubItems(3).Text = "Konvertiere" Then
+            If statusliste.Contains(statusliste.Item(id)) Then
+                With statusliste.Item(id)
+
+                    If .Name = "pb" & CStr(id) Then
+                        If CInt(position) < .Maximum Then
+                            .Value = CInt(position)
+                        Else
+                            .Value = .Maximum
+                        End If
+                    End If
+                End With
+            End If
+        End If
+    End Sub
+
+    Private Sub converter_Position(position As String, id As Integer) Handles converter.Position
+        If Me.InvokeRequired = True Then
+            Me.Invoke(New _Setvaluel_pb(AddressOf Setvalue_pb), position, id)
+        Else
+            Setvalue_pb(position, id)
+        End If
     End Sub
 End Class

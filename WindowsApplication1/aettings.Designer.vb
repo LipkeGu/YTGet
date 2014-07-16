@@ -60,6 +60,7 @@ Partial Class settings
         Me.save_collection_list = New System.Windows.Forms.Button()
         Me.Collection_list = New System.Windows.Forms.ListBox()
         Me.artist_detection_options = New System.Windows.Forms.GroupBox()
+        Me.Button2 = New System.Windows.Forms.Button()
         Me.detect_by_artist = New System.Windows.Forms.RadioButton()
         Me.save_artist_list = New System.Windows.Forms.Button()
         Me.al_training = New System.Windows.Forms.Button()
@@ -87,7 +88,6 @@ Partial Class settings
         Me.tl_add_entry = New System.Windows.Forms.Button()
         Me.Label4 = New System.Windows.Forms.Label()
         Me.title_pattern_list = New System.Windows.Forms.ListBox()
-        Me.Button2 = New System.Windows.Forms.Button()
         Me.TabControl1.SuspendLayout()
         Me.TabPage1.SuspendLayout()
         Me.GroupBox3.SuspendLayout()
@@ -199,7 +199,7 @@ Partial Class settings
         'ListBox1
         '
         Me.ListBox1.FormattingEnabled = True
-        Me.ListBox1.Items.AddRange(New Object() {"c", "cpn", "cver", "fexp", "keepalive", "key", "ms", "mt", "mv", "mws", "ratebypas", "signature", "sver", "algorithm"})
+        Me.ListBox1.Items.AddRange(New Object() {"cpn", "cver", "fexp", "keepalive", "key", "ms", "mt", "mv", "mws", "ratebypas", "signature", "sver", "algorithm"})
         Me.ListBox1.Location = New System.Drawing.Point(6, 19)
         Me.ListBox1.Name = "ListBox1"
         Me.ListBox1.Size = New System.Drawing.Size(128, 186)
@@ -485,6 +485,15 @@ Partial Class settings
         Me.artist_detection_options.TabStop = False
         Me.artist_detection_options.Text = "Artist-Erkennung"
         '
+        'Button2
+        '
+        Me.Button2.Location = New System.Drawing.Point(205, 218)
+        Me.Button2.Name = "Button2"
+        Me.Button2.Size = New System.Drawing.Size(41, 23)
+        Me.Button2.TabIndex = 8
+        Me.Button2.Text = "edit"
+        Me.Button2.UseVisualStyleBackColor = True
+        '
         'detect_by_artist
         '
         Me.detect_by_artist.AutoSize = True
@@ -767,15 +776,6 @@ Partial Class settings
         Me.title_pattern_list.Name = "title_pattern_list"
         Me.title_pattern_list.Size = New System.Drawing.Size(314, 147)
         Me.title_pattern_list.TabIndex = 0
-        '
-        'Button2
-        '
-        Me.Button2.Location = New System.Drawing.Point(205, 218)
-        Me.Button2.Name = "Button2"
-        Me.Button2.Size = New System.Drawing.Size(41, 23)
-        Me.Button2.TabIndex = 8
-        Me.Button2.Text = "edit"
-        Me.Button2.UseVisualStyleBackColor = True
         '
         'settings
         '

@@ -76,8 +76,7 @@ Public Class Youtube_libary
             ElseIf key = "c=" Then
                 Return "web"
             Else
-                Download_Manager.Error_Handler.ShowError("Konnte den " & key & " nicht finden!")
-                Download_Manager.Error_Handler.dumpLineToFile(_line, key, _line)
+                Download_Manager.Error_Handler.AddEvent("Download-Manager", EventType.Exception, "Konnte den " & key & " nicht finden!")
             End If
         End If
     End Function
@@ -136,237 +135,137 @@ Public Class Youtube_libary
                 Dim _req As HttpWebResponse = _ytweb.Get_HTTP_Response(_ytweb.create_HTTP_request(New Uri(CStr(url)), _useragent))
 
                 If _req IsNot Nothing Then
-                    RaiseEvent Report("Seite holen... " & _req.StatusDescription)
-
                     If _req.StatusCode = 200 Then
                         Dim _line As String = ""
                         Dim DLlink As String = ""
                         Dim vname As String = ""
                         Dim source As String = _req.ResponseUri.Host
-                        Dim au As String = ""
                         Dim quality As String = "Unbekannt"
                         Dim check As MsgBoxResult = MsgBoxResult.No
 
-                        check = MsgBox("Nach dem Gesetz ist es Illegal, Urheberechtlich geschütztes Material herunterzuladen! ... wirklich Forfahren?", MsgBoxStyle.YesNo)
+                        If _req.ContentType.Contains("text/html") Then
+                            Dim sr1 As New StreamReader(_req.GetResponseStream)
 
-                        If check = MsgBoxResult.Yes Then
-                            If _req.ContentType.Contains("text/html") Then
-                                Dim sr1 As New StreamReader(_req.GetResponseStream)
+                            Dim proto As String = "https://"
+                            Dim _tmp As String = ""
 
-                                Dim proto As String = "https://"
-                                Dim _tmp As String = ""
+                            While sr1.EndOfStream = False
+                                _line = _CleanReplace.replacechars(Trim(sr1.ReadLine), "source_code")
 
-                                RaiseEvent Report("Ermitteln der Werte ...")
+                                If _line IsNot Nothing Then
+                                    If _line.Length > 9 Then
 
-                                While sr1.EndOfStream = False
-                                    _line = _CleanReplace.replacechars(Trim(sr1.ReadLine), "source_code")
+                                        If _line.Contains("http") AndAlso _line.Contains("https://") Then
+                                            proto = "https://"
+                                        Else
+                                            proto = "http://"
+                                        End If
 
-                                    If _line IsNot Nothing Then
-                                        If _line.Length > 9 Then
-
-                                            If _line.Contains("http") AndAlso _line.Contains("https://") Then
-                                                proto = "https://"
-                                            Else
-                                                proto = "http://"
+                                        If _line.StartsWith("<meta property=") Then
+                                            If _line.StartsWith("<meta property=""og:site_name"" content=""") Then
+                                                source = _CleanReplace.replacechars(Trim(Gettags(_line, "<meta property=""og:site_name"" content=""", ">", 0)), "Name")
                                             End If
 
-                                            If _line.StartsWith("<meta property=") Then
-                                                If _line.StartsWith("<meta property=""og:site_name"" content=""") Then
-                                                    source = _CleanReplace.replacechars(Trim(Gettags(_line, "<meta property=""og:site_name"" content=""", ">", 0)), "Name")
-                                                End If
+                                            If _line.StartsWith("<meta property=""og:title"" content=""") Then
+                                                vname = _CleanReplace.replacechars(Trim(Gettags(_line, "<meta property=""og:title"" content=""", """", 0)), "Name")
+                                            End If
+                                        End If
 
-                                                If _line.StartsWith("<meta property=""og:Author"" content=""") Then
-                                                    au = _CleanReplace.replacechars(Trim(Gettags(_line, "<meta property=""og:Author"" content=""", ">", 0)), "Name")
-                                                End If
+                                        If CStr(url).Contains("vimeo.com") Then
+                                            source = "Vimeo"
+                                        End If
 
-                                                If _line.StartsWith("<meta property=""og:title"" content=""") Then
-                                                    vname = _CleanReplace.replacechars(Trim(Gettags(_line, "<meta property=""og:title"" content=""", """", 0)), "Name")
-                                                End If
+                                        If source = "YouTube" Then
+                                            If _line.Contains("<script>var ytplayer") AndAlso _line.Contains("url=") Then
+                                                DLlink = proto & GetParams(Mid(_line, InStrRev(_line, "url=")), proto)
+                                                GetContentinfo(DLlink, "854x480", vname, source)
+
+                                                Exit While
+                                            End If
+                                        ElseIf source = "Dailymotion" Then
+                                            If _line.Length > 10 AndAlso _line.Contains("video_url"":""") Then
+                                                _tmp = Trim(Gettags(_line, "video_url"":""", """,", 0))
+                                                DLlink = Trim(_tmp)
+                                                GetContentinfo(DLlink, "[Medium]", vname, source)
+                                                Exit While
+                                            End If
+                                        ElseIf source = "Vimeo" Then
+                                            If _line.Contains("<title>") Then
+                                                vname = _CleanReplace.replacechars(Trim(Gettags(_line, "<title>", "<", 0)), "Name")
                                             End If
 
-                                            If CStr(url).Contains("vimeo.com") Then
-                                                source = "Vimeo"
+                                            If _line.Length > 10 AndAlso _line.Contains("origin") Then
+                                                _tmp = Mid(_line, InStr(_line, """hd""") + 52, (InStr(_line, "720") - 4))
+                                                _tmp = Mid(_tmp, 1, InStr(_tmp, ",") - 2)
+
+                                                DLlink = proto & _tmp
+
+                                                Exit While
+                                            End If
+                                        Else
+                                            If _line.Contains("<h1>Index of") Then
+                                                source = "[HTTP] " & _req.ResponseUri.Host
                                             End If
 
-                                            If source = "YouTube" Then
-                                                If au.Length < 1 Then
-                                                    If _line.Contains("<link itemprop=") Then
-                                                        If _line.Contains("<link itemprop=""url"" href=" & proto & "www.youtube.com/user/") Then
-                                                            au = _CleanReplace.replacechars(Trim(Gettags(_line, "<link itemprop=""url"" href=" & proto & "www.youtube.com/user/", """>", 0)), "Author")
-                                                        End If
+                                            If _line.Contains("<a href") Then
+                                                _tmp = Gettags(_line, "<a href=""", """", 0)
+                                                vname = _CleanReplace.replacechars(_tmp, "Name")
+
+                                                For i As Integer = 0 To settings.artist_pattern_list.Items.Count - 1 Step 1
+                                                    If vname.ToLower.Contains(CStr(settings.artist_pattern_list.Items.Item(i)).ToLower) Then
+                                                        vname = Replace(vname.ToLower, CStr(settings.artist_pattern_list.Items.Item(i)).ToLower, "")
+                                                        vname = CStr(settings.artist_pattern_list.Items.Item(i)) & " - " & vname
+                                                        Exit For
                                                     End If
-                                                End If
+                                                Next
 
-                                                If _line.Contains("<script>var ytplayer") AndAlso _line.Contains("url=") Then
-                                                    Dim _trenner As String = "url="
-
-                                                    Dim urls() As String = Replace(_CleanReplace.replacechars(_line, "source_code"), _trenner, "##-##").Split(CChar("##-##"))
-
-                                                    SyncLock Main.lock
-                                                        For i As Integer = 0 To urls.Length - 1
-                                                            If urls(i).Length > 30 _
-                                                                AndAlso urls(i).Contains("/videoplayback?") _
-                                                                AndAlso urls(i).Contains("&expire=") _
-                                                                AndAlso urls(i).Contains("source=youtube") _
-                                                                AndAlso urls(i).Contains("&size=") Then
-
-                                                                If urls(i).Contains("size=1280x720") Then
-                                                                    If MsgBox("Folgendes Video wurde gefunden: " & vname & " Qualität: [HD], einreihen?", MsgBoxStyle.YesNoCancel) = MsgBoxResult.Yes Then
-                                                                        DLlink = proto & GetParams(urls(i), proto)
-                                                                        GetContentinfo(DLlink, "[HD] 1280x720", vname, source)
-                                                                        Exit For
-                                                                    ElseIf MsgBox("Folgendes Video wurde gefunden: " & vname & " Qualität: [HD], einreihen?", MsgBoxStyle.YesNoCancel) = MsgBoxResult.No Then
-                                                                        Continue For
-                                                                    Else
-                                                                        Exit While
-                                                                    End If
-
-                                                                ElseIf urls(i).Contains("size=854x480") Then
-                                                                    If MsgBox("Folgendes Video wurde gefunden: " & vname & " Qualität: [Medium] 854x480, einreihen?", MsgBoxStyle.YesNoCancel) = MsgBoxResult.Yes Then
-                                                                        DLlink = proto & GetParams(urls(i), proto)
-                                                                        GetContentinfo(DLlink, "[Medium] 854x480", vname, source)
-                                                                        Exit For
-                                                                    ElseIf MsgBox("Folgendes Video wurde gefunden: " & vname & " Qualität: [Medium] 854x480, einreihen?", MsgBoxStyle.YesNoCancel) = MsgBoxResult.No Then
-                                                                        Continue For
-                                                                    Else
-                                                                        Exit While
-                                                                    End If
-
-                                                                ElseIf urls(i).Contains("size=640x360") Then
-                                                                    If MsgBox("Folgendes Video wurde gefunden: " & vname & " Qualität: [Medium] 640x360, einreihen?", MsgBoxStyle.YesNoCancel) = MsgBoxResult.Yes Then
-                                                                        DLlink = proto & GetParams(urls(i), proto)
-                                                                        GetContentinfo(DLlink, "[Medium] 640x360", vname, source)
-                                                                        Exit For
-                                                                    ElseIf MsgBox("Folgendes Video wurde gefunden: " & vname & " Qualität: [Medium] 640x360, einreihen?", MsgBoxStyle.YesNoCancel) = MsgBoxResult.No Then
-                                                                        Continue For
-                                                                    Else
-                                                                        Exit While
-                                                                    End If
-
-                                                                ElseIf urls(i).Contains("size=426x240") Then
-                                                                    If MsgBox("Folgendes Video wurde gefunden: " & vname & " Qualität: [small] 426x240, einreihen?", MsgBoxStyle.YesNoCancel) = MsgBoxResult.Yes Then
-                                                                        DLlink = proto & GetParams(urls(i), proto)
-                                                                        GetContentinfo(DLlink, "[small] 426x240", vname, source)
-                                                                        Exit For
-                                                                    ElseIf MsgBox("Folgendes Video wurde gefunden: " & vname & " Qualität: [small] 426x240, einreihen?", MsgBoxStyle.YesNoCancel) = MsgBoxResult.No Then
-                                                                        Continue For
-                                                                    Else
-                                                                        Exit While
-                                                                    End If
-
-                                                                ElseIf urls(i).Contains("size=256x144") Then
-                                                                    If MsgBox("Folgendes Video wurde gefunden: " & vname & " Qualität: [Small] 256x144, einreihen?", MsgBoxStyle.YesNoCancel) = MsgBoxResult.Yes Then
-                                                                        DLlink = proto & GetParams(urls(i), proto)
-                                                                        GetContentinfo(DLlink, "[Small] 256x144", vname, source)
-                                                                        Exit For
-                                                                    ElseIf MsgBox("Folgendes Video wurde gefunden: " & vname & " Qualität: [Small] 256x144, einreihen?", MsgBoxStyle.YesNoCancel) = MsgBoxResult.No Then
-                                                                        Continue For
-                                                                    Else
-                                                                        Exit While
-                                                                    End If
-                                                                Else
-                                                                    If MsgBox("Folgendes Video wurde gefunden: " & vname & " Qualität: Unbekannt, einreihen?", MsgBoxStyle.YesNoCancel) = MsgBoxResult.Yes Then
-                                                                        DLlink = proto & GetParams(urls(i), proto)
-                                                                        GetContentinfo(DLlink, "Unbekannt", vname, source)
-                                                                        Exit For
-                                                                    ElseIf MsgBox("Folgendes Video wurde gefunden: " & vname & " Qualität: Unbekannt, einreihen?", MsgBoxStyle.YesNoCancel) = MsgBoxResult.No Then
-                                                                        Continue For
-                                                                    Else
-                                                                        Exit While
-                                                                    End If
-                                                                End If
-                                                            End If
-                                                        Next
-                                                    End SyncLock
-
-                                                    Exit While
-                                                End If
-                                            ElseIf source = "Dailymotion" Then
-                                                If _line.Length > 10 AndAlso _line.Contains("video_url"":""") Then
-                                                    _tmp = Trim(Gettags(_line, "video_url"":""", """,", 0))
-                                                    DLlink = Trim(_tmp)
-                                                    GetContentinfo(DLlink, "[Medium]", vname, source)
-                                                    Exit While
-                                                End If
-                                            ElseIf source = "Vimeo" Then
-                                                If _line.Contains("<title>") Then
-                                                    vname = _CleanReplace.replacechars(Trim(Gettags(_line, "<title>", "<", 0)), "Name")
-                                                End If
-
-                                                If _line.Length > 10 AndAlso _line.Contains("origin") Then
-                                                    Try
-                                                        _tmp = Mid(_line, InStr(_line, """hd""") + 52, (InStr(_line, "720") - 4))
-                                                        _tmp = Mid(_tmp, 1, InStr(_tmp, ",") - 2)
-
-                                                        DLlink = proto & _tmp
-
-                                                        Exit While
-                                                    Catch ex As Exception
-                                                        Exit While
-                                                    End Try
-                                                End If
-                                            Else
-                                                If _line.Contains("<h1>Index of") Then
-                                                    source = "[HTTP] " & _req.ResponseUri.Host
-                                                End If
-
-                                                If _line.Contains("<a href") Then
-                                                    _tmp = Gettags(_line, "<a href=""", """", 0)
-                                                    vname = _CleanReplace.replacechars(_tmp, "Name")
-
-                                                    For i As Integer = 0 To settings.artist_pattern_list.Items.Count - 1 Step 1
-                                                        If vname.ToLower.Contains(CStr(settings.artist_pattern_list.Items.Item(i)).ToLower) Then
-                                                            vname = Replace(vname.ToLower, CStr(settings.artist_pattern_list.Items.Item(i)).ToLower, "")
-                                                            vname = CStr(settings.artist_pattern_list.Items.Item(i)) & " - " & vname
-                                                            Exit For
-                                                        End If
-                                                    Next
-
-                                                    For i As Integer = 0 To settings.extensions.Items.Count - 1 Step 1
-                                                        If _tmp.ToLower.Contains(settings.extensions.Items.Item(i).ToString.ToLower) Then
-                                                            GetContentinfo(CStr(url) & _tmp, "Unbekannt", Replace(vname, settings.extensions.Items.Item(i).ToString.ToLower, ""), source)
-                                                        End If
-                                                    Next
-                                                End If
+                                                For i As Integer = 0 To settings.extensions.Items.Count - 1 Step 1
+                                                    If _tmp.ToLower.Contains(settings.extensions.Items.Item(i).ToString.ToLower) Then
+                                                        GetContentinfo(CStr(url) & _tmp, "Unbekannt", Replace(vname, settings.extensions.Items.Item(i).ToString.ToLower, ""), source)
+                                                    End If
+                                                Next
                                             End If
                                         End If
                                     End If
-
-                                End While
-
-                                sr1.Close()
-
-                            ElseIf _req.ContentType.Contains("audio/") Then
-                                vname = Replace(Mid(CStr(url), CStr(url).LastIndexOf("/") + 1), ".mp3", "")
-                                GetContentinfo(CStr(url), au, vname, source)
-
-                            ElseIf _req.ContentType.Contains("video/") Then
-                                vname = Replace(Mid(CStr(url), CStr(url).LastIndexOf("/") + 1), ".mp3", "")
-                                GetContentinfo(CStr(url), au, vname, source)
-
-                            Else
-                                vname = Mid(CStr(url), CStr(url).LastIndexOf("/") + 1)
-                                DLlink = CStr(url)
-
-                                If vname.ToLower.Contains("ffmpeg") Then
-                                    vname = "ffmpeg-latest-win32-static.7z"
                                 End If
 
-                                GetContentinfo(DLlink, au, vname, source)
+                            End While
+
+                            If sr1 IsNot Nothing Then
+                                sr1.Close()
                             End If
+
+                        ElseIf _req.ContentType.Contains("audio/") Then
+                            vname = Replace(Mid(CStr(url), CStr(url).LastIndexOf("/") + 1), ".mp3", "")
+                            GetContentinfo(CStr(url), "Unbekannt", vname, source)
+
+                        ElseIf _req.ContentType.Contains("video/") Then
+                            vname = Replace(Mid(CStr(url), CStr(url).LastIndexOf("/") + 1), ".mp3", "")
+                            GetContentinfo(CStr(url), "Unbekannt", vname, source)
+
+                        Else
+                            vname = Mid(CStr(url), CStr(url).LastIndexOf("/") + 1)
+
+                            If vname.ToLower.Contains("ffmpeg") Then
+                                vname = "ffmpeg-latest-win32-static.7z"
+                            End If
+
+                            GetContentinfo(CStr(url), "Unbekannt", vname, source)
                         End If
                     Else
-                        MsgBox("Server gab einen Fehler zurück: " & _req.StatusCode.ToString, MsgBoxStyle.Critical)
+                        Download_Manager.Error_Handler.AddEvent("Download-Manager", EventType.Exception, "Server gab einen Fehler zurück: " & _req.StatusCode.ToString)
                     End If
 
                     _req.Close()
+                Else
+                    Throw New Exception("[Debug] Downloader is nothing while determaining the Parameters")
                 End If
             Catch ex As Exception
-                MsgBox(ex.Message, MsgBoxStyle.Critical)
+                Download_Manager.Error_Handler.AddEvent("Download-Manager", EventType.Exception, ex.Message)
                 RaiseEvent releaseButtons(True)
             End Try
         Else
-            MsgBox("Link war kürzer als 10 zeichen!", MsgBoxStyle.Critical)
+            Download_Manager.Error_Handler.AddEvent("Download-Manager", EventType.Exception, "Link war kürzer als 10 zeichen!")
         End If
 
         RaiseEvent releaseButtons(True)
@@ -378,27 +277,32 @@ Public Class Youtube_libary
             Dim _req As HttpWebResponse = _ytweb.Get_HTTP_Response(_ytweb.create_HTTP_request(New Uri(CStr(Downloadlink)), _useragent))
 
             If _req IsNot Nothing Then
-                RaiseEvent Report("Hole Contentinfos...")
                 If _req.StatusCode = HttpStatusCode.OK Then
                     Dim _t As String = _req.ContentType
 
                     If source = "YouTube" AndAlso _req.ContentType.Contains("application/") Then
                         _t = "video/mp4"
                     Else
-                        _t = _req.ContentType
+                        _req.Close()
+                        RaiseEvent releaseButtons(True)
+                        Exit Sub
                     End If
 
                     If _t.Contains("video/") Or _t.Contains("audio/") Or _t.Contains("application/") Then
                         GetMovieinfo(videoname, source, CStr(_ytweb.ConvertContentLength(_req.ContentLength)), Downloadlink, _t, quality)
+                    Else
+                        Download_Manager.Error_Handler.AddEvent("Download-Manager", EventType.Warning, "got Content " & _t)
                     End If
                 Else
-                    MsgBox(_req.StatusCode.ToString & " : " & _req.StatusDescription, MsgBoxStyle.Critical)
+                    Download_Manager.Error_Handler.AddEvent("Download-Manager", EventType.Exception, _req.StatusCode.ToString & " : " & _req.StatusDescription)
                 End If
 
                 _req.Close()
+            Else
+                Throw New Exception("[Debug] Downloader is nothing while determaining the Content!")
             End If
         Else
-            MsgBox("Fehler in der URL: " & Downloadlink)
+            Download_Manager.Error_Handler.AddEvent("Download-Manager", EventType.Exception, "Fehler in der URL: " & Downloadlink)
         End If
 
         RaiseEvent releaseButtons(True)
@@ -406,6 +310,6 @@ Public Class Youtube_libary
 
     Private Sub GetMovieinfo(ByVal videoname As String, ByVal source As String, ByVal size As String, Downloadlink As String, type As String, ByVal quality As String)
         RaiseEvent Content(videoname, source, Downloadlink, type, size & " MB", quality)
-        RaiseEvent Report("Fertig!")
+        Download_Manager.Error_Handler.AddEvent("Download-Manager", EventType.information, "Fertig!")
     End Sub
 End Class

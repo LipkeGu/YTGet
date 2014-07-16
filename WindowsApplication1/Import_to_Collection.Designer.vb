@@ -24,7 +24,6 @@ Partial Class ImportTo_Collection
     Private Sub InitializeComponent()
         Me.components = New System.ComponentModel.Container()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(ImportTo_Collection))
-        Me.GroupBox1 = New System.Windows.Forms.GroupBox()
         Me.ListView1 = New System.Windows.Forms.ListView()
         Me.ch_artist = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.ch_title = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
@@ -34,7 +33,9 @@ Partial Class ImportTo_Collection
         Me.ch_Target = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.ch_duration = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.ch_bitrate = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
-        Me.ch_exception = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.ch_samprate = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.ch_protection = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.ch_copyright = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.ContextMenuStrip1 = New System.Windows.Forms.ContextMenuStrip(Me.components)
         Me.InterpretTitelToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.LetztesSegemntAlsTitelAllesAndereAlsInterpretToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
@@ -50,6 +51,7 @@ Partial Class ImportTo_Collection
         Me.InMusikPlayerÖffnenToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ErweitertToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.SucheUndErsetzeToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.DateiLöschenToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.Button1 = New System.Windows.Forms.Button()
         Me.Button2 = New System.Windows.Forms.Button()
         Me.Button3 = New System.Windows.Forms.Button()
@@ -58,41 +60,32 @@ Partial Class ImportTo_Collection
         Me.CheckBox2 = New System.Windows.Forms.CheckBox()
         Me.StatusStrip1 = New System.Windows.Forms.StatusStrip()
         Me.ToolStripProgressBar1 = New System.Windows.Forms.ToolStripProgressBar()
-        Me.ToolStripStatusLabel1 = New System.Windows.Forms.ToolStripStatusLabel()
         Me.Listing_BGW = New System.ComponentModel.BackgroundWorker()
         Me.Import_BGW = New System.ComponentModel.BackgroundWorker()
-        Me.donotcleanup = New System.Windows.Forms.CheckBox()
         Me.CheckBox3 = New System.Windows.Forms.CheckBox()
         Me.Button5 = New System.Windows.Forms.Button()
         Me.Button6 = New System.Windows.Forms.Button()
         Me.Button7 = New System.Windows.Forms.Button()
         Me.Button8 = New System.Windows.Forms.Button()
-        Me.GroupBox1.SuspendLayout()
+        Me.donotcleanup = New System.Windows.Forms.CheckBox()
+        Me.ToolStripContainer1 = New System.Windows.Forms.ToolStripContainer()
         Me.ContextMenuStrip1.SuspendLayout()
         Me.StatusStrip1.SuspendLayout()
+        Me.ToolStripContainer1.ContentPanel.SuspendLayout()
+        Me.ToolStripContainer1.SuspendLayout()
         Me.SuspendLayout()
-        '
-        'GroupBox1
-        '
-        Me.GroupBox1.Controls.Add(Me.ListView1)
-        Me.GroupBox1.Location = New System.Drawing.Point(12, 12)
-        Me.GroupBox1.Name = "GroupBox1"
-        Me.GroupBox1.Size = New System.Drawing.Size(760, 329)
-        Me.GroupBox1.TabIndex = 0
-        Me.GroupBox1.TabStop = False
-        Me.GroupBox1.Text = "MP3-Dateien importieren"
         '
         'ListView1
         '
         Me.ListView1.CheckBoxes = True
-        Me.ListView1.Columns.AddRange(New System.Windows.Forms.ColumnHeader() {Me.ch_artist, Me.ch_title, Me.ch_count, Me.ch_source, Me.ch_size, Me.ch_Target, Me.ch_duration, Me.ch_bitrate, Me.ch_exception})
+        Me.ListView1.Columns.AddRange(New System.Windows.Forms.ColumnHeader() {Me.ch_artist, Me.ch_title, Me.ch_count, Me.ch_source, Me.ch_size, Me.ch_Target, Me.ch_duration, Me.ch_bitrate, Me.ch_samprate, Me.ch_protection, Me.ch_copyright})
         Me.ListView1.ContextMenuStrip = Me.ContextMenuStrip1
         Me.ListView1.Dock = System.Windows.Forms.DockStyle.Fill
         Me.ListView1.FullRowSelect = True
         Me.ListView1.GridLines = True
-        Me.ListView1.Location = New System.Drawing.Point(3, 16)
+        Me.ListView1.Location = New System.Drawing.Point(0, 0)
         Me.ListView1.Name = "ListView1"
-        Me.ListView1.Size = New System.Drawing.Size(754, 310)
+        Me.ListView1.Size = New System.Drawing.Size(771, 316)
         Me.ListView1.TabIndex = 0
         Me.ListView1.UseCompatibleStateImageBehavior = False
         Me.ListView1.View = System.Windows.Forms.View.Details
@@ -137,9 +130,18 @@ Partial Class ImportTo_Collection
         '
         Me.ch_bitrate.Text = "Bitrate (Kbits/s)"
         '
-        'ch_exception
+        'ch_samprate
         '
-        Me.ch_exception.Text = "Fehler"
+        Me.ch_samprate.Text = "Sampling-Rate"
+        Me.ch_samprate.Width = 120
+        '
+        'ch_protection
+        '
+        Me.ch_protection.Text = "Kopierschutz"
+        '
+        'ch_copyright
+        '
+        Me.ch_copyright.Text = "Copyright"
         '
         'ContextMenuStrip1
         '
@@ -224,7 +226,7 @@ Partial Class ImportTo_Collection
         '
         'ErweitertToolStripMenuItem
         '
-        Me.ErweitertToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.SucheUndErsetzeToolStripMenuItem})
+        Me.ErweitertToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.SucheUndErsetzeToolStripMenuItem, Me.DateiLöschenToolStripMenuItem})
         Me.ErweitertToolStripMenuItem.Name = "ErweitertToolStripMenuItem"
         Me.ErweitertToolStripMenuItem.Size = New System.Drawing.Size(231, 22)
         Me.ErweitertToolStripMenuItem.Text = "Erweitert"
@@ -234,6 +236,13 @@ Partial Class ImportTo_Collection
         Me.SucheUndErsetzeToolStripMenuItem.Name = "SucheUndErsetzeToolStripMenuItem"
         Me.SucheUndErsetzeToolStripMenuItem.Size = New System.Drawing.Size(169, 22)
         Me.SucheUndErsetzeToolStripMenuItem.Text = "Suche und ersetze"
+        '
+        'DateiLöschenToolStripMenuItem
+        '
+        Me.DateiLöschenToolStripMenuItem.ForeColor = System.Drawing.Color.DarkRed
+        Me.DateiLöschenToolStripMenuItem.Name = "DateiLöschenToolStripMenuItem"
+        Me.DateiLöschenToolStripMenuItem.Size = New System.Drawing.Size(169, 22)
+        Me.DateiLöschenToolStripMenuItem.Text = "Datei löschen"
         '
         'Button1
         '
@@ -259,9 +268,9 @@ Partial Class ImportTo_Collection
         Me.Button3.Enabled = False
         Me.Button3.Location = New System.Drawing.Point(246, 347)
         Me.Button3.Name = "Button3"
-        Me.Button3.Size = New System.Drawing.Size(22, 23)
+        Me.Button3.Size = New System.Drawing.Size(67, 23)
         Me.Button3.TabIndex = 3
-        Me.Button3.Text = "-"
+        Me.Button3.Text = "Entfernen"
         Me.Button3.UseVisualStyleBackColor = True
         '
         'Button4
@@ -299,7 +308,7 @@ Partial Class ImportTo_Collection
         '
         'StatusStrip1
         '
-        Me.StatusStrip1.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ToolStripProgressBar1, Me.ToolStripStatusLabel1})
+        Me.StatusStrip1.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ToolStripProgressBar1})
         Me.StatusStrip1.Location = New System.Drawing.Point(0, 486)
         Me.StatusStrip1.Name = "StatusStrip1"
         Me.StatusStrip1.Size = New System.Drawing.Size(771, 22)
@@ -312,12 +321,6 @@ Partial Class ImportTo_Collection
         Me.ToolStripProgressBar1.Size = New System.Drawing.Size(150, 16)
         Me.ToolStripProgressBar1.Visible = False
         '
-        'ToolStripStatusLabel1
-        '
-        Me.ToolStripStatusLabel1.Name = "ToolStripStatusLabel1"
-        Me.ToolStripStatusLabel1.Size = New System.Drawing.Size(37, 17)
-        Me.ToolStripStatusLabel1.Text = "Bereit"
-        '
         'Listing_BGW
         '
         Me.Listing_BGW.WorkerReportsProgress = True
@@ -327,17 +330,6 @@ Partial Class ImportTo_Collection
         '
         Me.Import_BGW.WorkerReportsProgress = True
         Me.Import_BGW.WorkerSupportsCancellation = True
-        '
-        'donotcleanup
-        '
-        Me.donotcleanup.AutoSize = True
-        Me.donotcleanup.ForeColor = System.Drawing.Color.DarkRed
-        Me.donotcleanup.Location = New System.Drawing.Point(15, 442)
-        Me.donotcleanup.Name = "donotcleanup"
-        Me.donotcleanup.Size = New System.Drawing.Size(206, 17)
-        Me.donotcleanup.TabIndex = 8
-        Me.donotcleanup.Text = "Bereinigungs-Regeln nicht anwenden!"
-        Me.donotcleanup.UseVisualStyleBackColor = True
         '
         'CheckBox3
         '
@@ -389,17 +381,41 @@ Partial Class ImportTo_Collection
         Me.Button8.Text = "Alle Abwählen"
         Me.Button8.UseVisualStyleBackColor = True
         '
+        'donotcleanup
+        '
+        Me.donotcleanup.AutoSize = True
+        Me.donotcleanup.Location = New System.Drawing.Point(15, 442)
+        Me.donotcleanup.Name = "donotcleanup"
+        Me.donotcleanup.Size = New System.Drawing.Size(194, 17)
+        Me.donotcleanup.TabIndex = 14
+        Me.donotcleanup.Text = "Geschützte MP3-Dateien ignorieren"
+        Me.donotcleanup.UseVisualStyleBackColor = True
+        '
+        'ToolStripContainer1
+        '
+        '
+        'ToolStripContainer1.ContentPanel
+        '
+        Me.ToolStripContainer1.ContentPanel.Controls.Add(Me.ListView1)
+        Me.ToolStripContainer1.ContentPanel.Size = New System.Drawing.Size(771, 316)
+        Me.ToolStripContainer1.Location = New System.Drawing.Point(0, 0)
+        Me.ToolStripContainer1.Name = "ToolStripContainer1"
+        Me.ToolStripContainer1.Size = New System.Drawing.Size(771, 341)
+        Me.ToolStripContainer1.TabIndex = 15
+        Me.ToolStripContainer1.Text = "ToolStripContainer1"
+        '
         'ImportTo_Collection
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(771, 508)
+        Me.Controls.Add(Me.ToolStripContainer1)
+        Me.Controls.Add(Me.donotcleanup)
         Me.Controls.Add(Me.Button8)
         Me.Controls.Add(Me.Button7)
         Me.Controls.Add(Me.Button6)
         Me.Controls.Add(Me.Button5)
         Me.Controls.Add(Me.CheckBox3)
-        Me.Controls.Add(Me.donotcleanup)
         Me.Controls.Add(Me.StatusStrip1)
         Me.Controls.Add(Me.CheckBox2)
         Me.Controls.Add(Me.CheckBox1)
@@ -407,20 +423,20 @@ Partial Class ImportTo_Collection
         Me.Controls.Add(Me.Button3)
         Me.Controls.Add(Me.Button2)
         Me.Controls.Add(Me.Button1)
-        Me.Controls.Add(Me.GroupBox1)
         Me.FormBorderStyle = System.Windows.Forms.FormBorderStyle.SizableToolWindow
         Me.Icon = CType(resources.GetObject("$this.Icon"), System.Drawing.Icon)
         Me.Name = "ImportTo_Collection"
         Me.Text = "Import mp3-files into the collection!"
-        Me.GroupBox1.ResumeLayout(False)
         Me.ContextMenuStrip1.ResumeLayout(False)
         Me.StatusStrip1.ResumeLayout(False)
         Me.StatusStrip1.PerformLayout()
+        Me.ToolStripContainer1.ContentPanel.ResumeLayout(False)
+        Me.ToolStripContainer1.ResumeLayout(False)
+        Me.ToolStripContainer1.PerformLayout()
         Me.ResumeLayout(False)
         Me.PerformLayout()
 
     End Sub
-    Friend WithEvents GroupBox1 As System.Windows.Forms.GroupBox
     Friend WithEvents ListView1 As System.Windows.Forms.ListView
     Friend WithEvents ch_artist As System.Windows.Forms.ColumnHeader
     Friend WithEvents ch_title As System.Windows.Forms.ColumnHeader
@@ -433,12 +449,10 @@ Partial Class ImportTo_Collection
     Friend WithEvents CheckBox1 As System.Windows.Forms.CheckBox
     Friend WithEvents CheckBox2 As System.Windows.Forms.CheckBox
     Friend WithEvents StatusStrip1 As System.Windows.Forms.StatusStrip
-    Friend WithEvents ToolStripStatusLabel1 As System.Windows.Forms.ToolStripStatusLabel
     Friend WithEvents Listing_BGW As System.ComponentModel.BackgroundWorker
     Friend WithEvents Import_BGW As System.ComponentModel.BackgroundWorker
     Friend WithEvents ToolStripProgressBar1 As System.Windows.Forms.ToolStripProgressBar
     Friend WithEvents ch_size As System.Windows.Forms.ColumnHeader
-    Friend WithEvents donotcleanup As System.Windows.Forms.CheckBox
     Friend WithEvents CheckBox3 As System.Windows.Forms.CheckBox
     Friend WithEvents ContextMenuStrip1 As System.Windows.Forms.ContextMenuStrip
     Friend WithEvents InterpretTitelToolStripMenuItem As System.Windows.Forms.ToolStripMenuItem
@@ -455,7 +469,7 @@ Partial Class ImportTo_Collection
     Friend WithEvents ch_Target As System.Windows.Forms.ColumnHeader
     Friend WithEvents ch_duration As System.Windows.Forms.ColumnHeader
     Friend WithEvents ch_bitrate As System.Windows.Forms.ColumnHeader
-    Friend WithEvents ch_exception As System.Windows.Forms.ColumnHeader
+    Friend WithEvents ch_samprate As System.Windows.Forms.ColumnHeader
     Friend WithEvents LetzteSektionEntfernenToolStripMenuItem As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents InterpretUndTitelTauschenToolStripMenuItem As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents InterpretFestlegenToolStripMenuItem As System.Windows.Forms.ToolStripMenuItem
@@ -463,4 +477,9 @@ Partial Class ImportTo_Collection
     Friend WithEvents SucheUndErsetzeToolStripMenuItem As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents Button7 As System.Windows.Forms.Button
     Friend WithEvents Button8 As System.Windows.Forms.Button
+    Friend WithEvents ch_protection As System.Windows.Forms.ColumnHeader
+    Friend WithEvents ch_copyright As System.Windows.Forms.ColumnHeader
+    Friend WithEvents DateiLöschenToolStripMenuItem As System.Windows.Forms.ToolStripMenuItem
+    Friend WithEvents donotcleanup As System.Windows.Forms.CheckBox
+    Friend WithEvents ToolStripContainer1 As System.Windows.Forms.ToolStripContainer
 End Class

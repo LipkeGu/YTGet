@@ -4,7 +4,7 @@ Imports System.IO
 Class Downloads
 
 #Region "Interne-Deklarationen"
-    Dim converter As New convert
+
     Dim _cleanreplace As New CleanReplace
     Dim lock As New Object
 
@@ -14,7 +14,7 @@ Class Downloads
     Public Event Download_begonnen(ByVal ref As Download)
 
     Public Current_Downloads As New List(Of Download)
-#End Region
+
 
     Public ReadOnly Property Aktelle_Downloads As Integer
         Get
@@ -28,6 +28,8 @@ Class Downloads
         End Get
     End Property
 
+#End Region
+
     Public Sub Add_Download(ByVal source As String, ByVal target As String, ByVal identifider As Integer)
         If Current_Downloads.Count < Main.max_Downloads Then
             SyncLock lock
@@ -35,98 +37,124 @@ Class Downloads
 
                 With dl
                     ._reference = dl
-                    AddHandler dl.Download_started, AddressOf Begonnen
-                    AddHandler dl.Download_completed, AddressOf Fertig
-                    AddHandler dl.Download_Aborted, AddressOf Abgebrochen
-                    AddHandler dl.Download_Process_changed, AddressOf Fortschritt
+                    AddHandler .Download_started, AddressOf Begonnen
+                    AddHandler .Download_completed, AddressOf Fertig
+                    AddHandler .Download_Process_changed, AddressOf Fortschritt
                 End With
 
                 Current_Downloads.Add(dl)
+                Main.Eventlog.AddEvent("Download-Manager", EventType.information, "Download hinzugefügt!")
             End SyncLock
         End If
     End Sub
 
     Public Sub Cancel()
-        For Each slot As Download In Current_Downloads
-            If slot IsNot Nothing Then
-                If slot.Fertig = False Then
-                    slot.Webclient.CancelAsync()
+        For i As Integer = Current_Downloads.Count - 1 To 0 Step 1
+            If Current_Downloads.Item(i) IsNot Nothing Then
+                If Current_Downloads.Item(i).Fertig = False Then
+                    Current_Downloads.Item(i).Cancel_Download()
+                    If File.Exists(Current_Downloads.Item(i).Ziel) Then
+                        File.Delete(Current_Downloads.Item(i).Ziel)
+                    End If
+                    Exit For
+                End If
+            End If
+        Next
+
+    End Sub
+
+    Public Sub Cancel(ByVal id As Integer)
+        For i As Integer = Current_Downloads.Count - 1 To 0 Step 1
+            If Current_Downloads.Item(i) IsNot Nothing Then
+                If i = Current_Downloads.Item(i).Id Then
+                    Current_Downloads.Item(i).Cancel_Download()
+                    Exit For
                 End If
             End If
         Next
     End Sub
 
-    
 
 #Region "Events"
     Private Sub Fertig(ref As Download)
-        If Main.canceling = False Then
-
-
+        If ref.canceled = False Then
             Dim target As String = ""
+            Dim dirmask As String = ""
 
-            If Main.sortbyartist = True Then
-                Dim dirmask As String = ""
-
-                If Download_Manager.DL_Listview.Items.Item(ref.Id).SubItems(0).Text.Contains("-") Then
-                    dirmask = _cleanreplace.replacechars(Trim(Mid(Download_Manager.DL_Listview.Items.Item(ref.Id).SubItems(0).Text, 1, Download_Manager.DL_Listview.Items.Item(ref.Id).SubItems(0).Text.LastIndexOf("-"))), "Target-Directory")
-                End If
-
-                If Not Directory.Exists(Main.Collections.Aktuelle_Sammlung.Path & dirmask) Then
-                    Directory.CreateDirectory(Main.Collections.Aktuelle_Sammlung.Path & dirmask)
-                End If
-
-                target = Main.Collections.Aktuelle_Sammlung.Path & dirmask & "\" & Download_Manager.DL_Listview.Items.Item(ref.Id).SubItems(0).Text & ".mp3"
-            Else
-                target = Main.Collections.Aktuelle_Sammlung.Path & Download_Manager.DL_Listview.Items.Item(ref.Id).SubItems(0).Text & ".mp3"
+            If Download_Manager.DL_Listview.Items.Item(ref.Id).SubItems(0).Text.Contains("-") Then
+                dirmask = _cleanreplace.replacechars(Trim(Mid(Download_Manager.DL_Listview.Items.Item(ref.Id).SubItems(0).Text, 1, Download_Manager.DL_Listview.Items.Item(ref.Id).SubItems(0).Text.LastIndexOf("-"))), "Target-Directory")
             End If
+
+            If Not Directory.Exists(Main.Collections.Aktuelle_Sammlung.Path & dirmask) Then
+                Directory.CreateDirectory(Main.Collections.Aktuelle_Sammlung.Path & dirmask)
+            End If
+
+            target = Main.Collections.Aktuelle_Sammlung.Path & dirmask & "\" & Main.FileIO.TestFileName(Download_Manager.DL_Listview.Items.Item(ref.Id).SubItems(0).Text & ".mp3")
 
             If File.Exists(ref.Ziel) Then
                 If ref.Ziel.Contains(".mp4") Or ref.Ziel.Contains(".flv") AndAlso File.Exists(Main.converter.konverter_path) Then
-                    Download_Manager.DL_Listview.Items.Item(ref.Id).SubItems(3).Text = "Konvertieren..."
-                    converter.convertToMP3(ref.Ziel, target, Main.MP3_Bitrate, ref.Id.ToString)
+                    Download_Manager.DL_Listview.Items.Item(ref.Id).SubItems(3).Text = "Konvertiere"
+                    Download_Manager.converter.convertToMP3(ref.Ziel, target, Main.MP3_Bitrate, ref.Id.ToString)
                 End If
 
                 RaiseEvent Download_Fertig(ref)
+                Main.Eventlog.AddEvent("Download-Manager", EventType.information, "Die Datei wurde erfolgreich Heruntergeladen!")
             Else
-                MsgBox("Datei " & ref.Ziel & " wurde nicht gefunden!", MsgBoxStyle.Critical)
+                Main.Eventlog.AddEvent("Download-Manager", EventType.Exception, "Datei " & Chr(34) & ref.Ziel & Chr(34) & " wurde nicht gefunden!")
                 RaiseEvent Download_Abgebrochen(ref)
             End If
 
             Download_Manager.cancel_all_downloads.Enabled = False
             Download_Manager.download.Enabled = True
-        Else
-            RaiseEvent Download_Abgebrochen(ref)
-            Main.canceling = False
+
+            Download_Manager.DL_Listview.Items.Item(ref.Id).SubItems(3).Text = "Fertig"
         End If
 
-        Download_Manager.DL_Listview.Items.Item(ref.Id).SubItems(3).Text = "Fertig"
-        Remove(ref)
-    End Sub
-
-    Private Sub Abgebrochen(ref As Download)
-        RaiseEvent Download_Abgebrochen(ref)
+        Main.canceling = False
         Remove(ref)
     End Sub
 
     Private Sub Fortschritt(Percent As Integer, current_bytes As Integer, total_bytes As Integer, ref As Download)
-        RaiseEvent Download_Fortschritt(Percent, current_bytes, total_bytes, ref)
+        If ref.canceled = False Then
+            RaiseEvent Download_Fortschritt(Percent, current_bytes, total_bytes, ref)
+        End If
     End Sub
 
     Private Sub Begonnen(ref As Download)
+        Main.Eventlog.AddEvent("Download-Manager", EventType.information, "Download gestartet!")
+        Main.canceling = True
         RaiseEvent Download_begonnen(ref)
+    End Sub
+
+    Public Sub Remove(ByVal id As Integer)
+        SyncLock lock
+            For i As Integer = Current_Downloads.Count - 1 To 0 Step 1
+                If Current_Downloads.Item(i).Id = id Then
+                    Current_Downloads.Item(i).Webclient.Dispose()
+                    Current_Downloads.Remove(Current_Downloads.Item(i))
+                    Main.Eventlog.AddEvent("Download", EventType.information, "Download beendet!")
+                    Exit For
+                End If
+            Next
+        End SyncLock
     End Sub
 
     Public Sub Remove(ByVal ref As Download)
         SyncLock lock
             If Current_Downloads.Count > 0 Then
-                Current_Downloads.Remove(ref)
+                If ref IsNot Nothing Then
+                    If ref.Webclient IsNot Nothing Then
+                        ref.Webclient.Dispose()
+                        ref = Nothing
+                    End If
+
+                    Current_Downloads.Remove(ref)
+                    Main.Eventlog.AddEvent("Download", EventType.information, "Download entfernt!")
+                End If
             End If
         End SyncLock
     End Sub
 #End Region
-
-
 End Class
 
 Class Download
@@ -150,7 +178,7 @@ Class Download
     Private _percentage_completed As Integer = 0
     Public _reference As Download = Nothing
     Private _content_type As String = ""
-#End Region
+
 
     Public ReadOnly Property Webclient As WebClient
         Get
@@ -182,6 +210,14 @@ Class Download
         End Get
     End Property
 
+    Public ReadOnly Property canceled As Boolean
+        Get
+            Return _aborted
+        End Get
+    End Property
+
+#End Region
+
     Sub New(ByVal source As String, ByVal target As String, ByVal identifider As Integer)
         _finisch = False
 
@@ -197,10 +233,13 @@ Class Download
             _identifider = identifider
         End If
 
-        AddHandler _webclient.DownloadFileCompleted, AddressOf _completed
-        AddHandler _webclient.DownloadProgressChanged, AddressOf _changed
+        With _webclient
+            AddHandler .DownloadFileCompleted, AddressOf _completed
+            AddHandler .DownloadProgressChanged, AddressOf _changed
 
-        _webclient.DownloadFileAsync(New Uri(_source), _target)
+            .DownloadFileAsync(New Uri(_source), _target)
+        End With
+
         RaiseEvent Download_started(_reference)
 
     End Sub
@@ -217,20 +256,16 @@ Class Download
     End Sub
 
     Private Sub _completed(sender As Object, e As System.ComponentModel.AsyncCompletedEventArgs)
-        _finisch = True
+        RaiseEvent Download_completed(_reference)
 
-        If e.Cancelled = False Then
-            RaiseEvent Download_completed(_reference)
-        Else
-            RaiseEvent Download_Aborted(_reference)
-        End If
     End Sub
 
-    Private Sub Cancel_Download(ByVal ref As Download)
-        If ref.Fertig = False Then
-            ref._webclient.CancelAsync()
-            RaiseEvent Download_Aborted(ref)
-        End If
+    Public Sub Cancel_Download()
+        _aborted = True
+        _webclient.CancelAsync()
+        _webclient.Dispose()
+        _webclient = Nothing
+        Main.Eventlog.AddEvent("Download-Manager", EventType.information, "Download beendet!")
     End Sub
 #End Region
 

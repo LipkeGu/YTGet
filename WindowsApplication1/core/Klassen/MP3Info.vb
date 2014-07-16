@@ -91,11 +91,11 @@ Public Class MP3Info
 
             If Not GetMP3HeaderBytes(Mp3FInfo.FullName) Then
                 'If the GetMP3HeaderBytes() fails throw exception.
-                RaiseEvent Exception("Given file '" & MP3FilePath & "' isn't a valid Mp3 file.")
+                RaiseEvent Exception("Die Datei '" & MP3FilePath & "' ist keine gültige MP3-Datei!")
             End If
 
         Else
-            RaiseEvent Exception("Given file '" & MP3FilePath & "' doesn't exist.")
+            RaiseEvent Exception("Die Datei '" & MP3FilePath & "' wurde nicht gefunden!")
         End If
     End Sub
 
@@ -265,8 +265,8 @@ Public Class MP3Info
             'We get the last 128 bytes from the file...
             MP3FileStream.Position = MP3FileStream.Length - 128
             MP3FileStream.Read(ID3v1Bytes, 0, 128)
-        Catch
-            RaiseEvent Exception("Fehler beim lesen der ID3 Informationen von '" & MP3FilePath & "'.")
+        Catch ex As Exception
+            RaiseEvent Exception("Fehler beim lesen der MP3-Tags von '" & MP3FilePath & "'.")
             Exit Function
         Finally
             MP3FileStream.Close()
@@ -322,7 +322,7 @@ Public Class MP3Info
             Else
                 Return False
             End If
-        Catch
+        Catch ex As Exception
             RaiseEvent Exception("Fehler beim lesen der Datei '" & Mp3FInfo.FullName & "'.")
             Exit Function
         Finally
@@ -353,7 +353,7 @@ Public Class MP3Info
                 TOC(i) = CType(XingHeaderBytes(12 + i), Integer)
             Next
         Else
-            RaiseEvent Exception("'" & Mp3FInfo.FullName & "' Header hat ungültige Informationen!")
+            RaiseEvent Exception("'" & Mp3FInfo.FullName & "' enthält ungültige Frame-Informationen!")
             Exit Function
         End If
 
@@ -453,6 +453,7 @@ Public Class MP3Info
                     AverageBitrate = CInt(Math.Round(((AverageFrameLenght * GetSamplingRateFreq()) / 144) / 1000, 0))
                     Return AverageBitrate * 1000
                 Else
+                    RaiseEvent Exception("Fehler beim lesen der Datei '" & Mp3FInfo.FullName & "'.")
                     Return 192000
                 End If
             End With

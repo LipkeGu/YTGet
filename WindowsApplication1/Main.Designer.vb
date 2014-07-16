@@ -22,6 +22,7 @@ Partial Class Main
     'Das Bearbeiten mit dem Code-Editor ist nicht möglich.
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
+        Me.components = New System.ComponentModel.Container()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(Main))
         Me.MenuStrip1 = New System.Windows.Forms.MenuStrip()
         Me.Main_mi_main = New System.Windows.Forms.ToolStripMenuItem()
@@ -31,6 +32,7 @@ Partial Class Main
         Me.Menu_collections_oeffnen = New System.Windows.Forms.ToolStripMenuItem()
         Me.ImportierenToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.EntfernenToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.BestandslisteErstellenToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.ToolStripSeparator2 = New System.Windows.Forms.ToolStripSeparator()
         Me.DownloaderToolStripMenuItem1 = New System.Windows.Forms.ToolStripMenuItem()
         Me.ToolStripSeparator3 = New System.Windows.Forms.ToolStripSeparator()
@@ -38,12 +40,16 @@ Partial Class Main
         Me.ExtrasToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.EinstellungenToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.Speicherort = New System.Windows.Forms.ToolStripComboBox()
-        Me.StatusStrip1 = New System.Windows.Forms.StatusStrip()
-        Me.ProgressBar1 = New System.Windows.Forms.ToolStripProgressBar()
-        Me.StatusLabel1 = New System.Windows.Forms.ToolStripStatusLabel()
-        Me.BestandslisteErstellenToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.GroupBox1 = New System.Windows.Forms.GroupBox()
+        Me.ListView1 = New System.Windows.Forms.ListView()
+        Me.ch_lfd = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.ch_source = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.ch_type = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.ch_Message = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.NotifyIcon1 = New System.Windows.Forms.NotifyIcon(Me.components)
+        Me.VerwaltenToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.MenuStrip1.SuspendLayout()
-        Me.StatusStrip1.SuspendLayout()
+        Me.GroupBox1.SuspendLayout()
         Me.SuspendLayout()
         '
         'MenuStrip1
@@ -66,7 +72,7 @@ Partial Class Main
         '
         'SpeicherorteToolStripMenuItem
         '
-        Me.SpeicherorteToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.Menu_collections_festlegen, Me.ToolStripSeparator1, Me.Menu_collections_oeffnen, Me.ImportierenToolStripMenuItem, Me.EntfernenToolStripMenuItem, Me.BestandslisteErstellenToolStripMenuItem})
+        Me.SpeicherorteToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.Menu_collections_festlegen, Me.ToolStripSeparator1, Me.Menu_collections_oeffnen, Me.ImportierenToolStripMenuItem, Me.EntfernenToolStripMenuItem, Me.BestandslisteErstellenToolStripMenuItem, Me.VerwaltenToolStripMenuItem})
         Me.SpeicherorteToolStripMenuItem.Name = "SpeicherorteToolStripMenuItem"
         Me.SpeicherorteToolStripMenuItem.Size = New System.Drawing.Size(152, 22)
         Me.SpeicherorteToolStripMenuItem.Text = "Sammlungen"
@@ -102,6 +108,12 @@ Partial Class Main
         Me.EntfernenToolStripMenuItem.Name = "EntfernenToolStripMenuItem"
         Me.EntfernenToolStripMenuItem.Size = New System.Drawing.Size(217, 22)
         Me.EntfernenToolStripMenuItem.Text = "Sammlungen entfernen..."
+        '
+        'BestandslisteErstellenToolStripMenuItem
+        '
+        Me.BestandslisteErstellenToolStripMenuItem.Name = "BestandslisteErstellenToolStripMenuItem"
+        Me.BestandslisteErstellenToolStripMenuItem.Size = New System.Drawing.Size(217, 22)
+        Me.BestandslisteErstellenToolStripMenuItem.Text = "Bestandsliste erstellen..."
         '
         'ToolStripSeparator2
         '
@@ -143,39 +155,68 @@ Partial Class Main
         Me.Speicherort.Name = "Speicherort"
         Me.Speicherort.Size = New System.Drawing.Size(300, 23)
         '
-        'StatusStrip1
+        'GroupBox1
         '
-        Me.StatusStrip1.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ProgressBar1, Me.StatusLabel1})
-        Me.StatusStrip1.Location = New System.Drawing.Point(0, 480)
-        Me.StatusStrip1.Name = "StatusStrip1"
-        Me.StatusStrip1.Size = New System.Drawing.Size(985, 22)
-        Me.StatusStrip1.TabIndex = 3
-        Me.StatusStrip1.Text = "StatusStrip1"
+        Me.GroupBox1.Controls.Add(Me.ListView1)
+        Me.GroupBox1.Dock = System.Windows.Forms.DockStyle.Bottom
+        Me.GroupBox1.Location = New System.Drawing.Point(0, 374)
+        Me.GroupBox1.Name = "GroupBox1"
+        Me.GroupBox1.Size = New System.Drawing.Size(985, 128)
+        Me.GroupBox1.TabIndex = 5
+        Me.GroupBox1.TabStop = False
+        Me.GroupBox1.Text = "Event-Log"
         '
-        'ProgressBar1
+        'ListView1
         '
-        Me.ProgressBar1.Name = "ProgressBar1"
-        Me.ProgressBar1.Size = New System.Drawing.Size(100, 16)
-        Me.ProgressBar1.Visible = False
+        Me.ListView1.Columns.AddRange(New System.Windows.Forms.ColumnHeader() {Me.ch_lfd, Me.ch_source, Me.ch_type, Me.ch_Message})
+        Me.ListView1.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.ListView1.FullRowSelect = True
+        Me.ListView1.GridLines = True
+        Me.ListView1.Location = New System.Drawing.Point(3, 16)
+        Me.ListView1.Name = "ListView1"
+        Me.ListView1.Size = New System.Drawing.Size(979, 109)
+        Me.ListView1.TabIndex = 0
+        Me.ListView1.UseCompatibleStateImageBehavior = False
+        Me.ListView1.View = System.Windows.Forms.View.Details
         '
-        'StatusLabel1
+        'ch_lfd
         '
-        Me.StatusLabel1.Name = "StatusLabel1"
-        Me.StatusLabel1.Size = New System.Drawing.Size(46, 17)
-        Me.StatusLabel1.Text = "Bereit..."
+        Me.ch_lfd.Text = "#"
+        Me.ch_lfd.Width = 32
         '
-        'BestandslisteErstellenToolStripMenuItem
+        'ch_source
         '
-        Me.BestandslisteErstellenToolStripMenuItem.Name = "BestandslisteErstellenToolStripMenuItem"
-        Me.BestandslisteErstellenToolStripMenuItem.Size = New System.Drawing.Size(217, 22)
-        Me.BestandslisteErstellenToolStripMenuItem.Text = "Bestandsliste erstellen..."
+        Me.ch_source.Text = "Quelle"
+        Me.ch_source.Width = 95
+        '
+        'ch_type
+        '
+        Me.ch_type.Text = "Type"
+        Me.ch_type.Width = 84
+        '
+        'ch_Message
+        '
+        Me.ch_Message.Text = "Meldung"
+        Me.ch_Message.Width = 900
+        '
+        'NotifyIcon1
+        '
+        Me.NotifyIcon1.Icon = CType(resources.GetObject("NotifyIcon1.Icon"), System.Drawing.Icon)
+        Me.NotifyIcon1.Text = "NotifyIcon1"
+        Me.NotifyIcon1.Visible = True
+        '
+        'VerwaltenToolStripMenuItem
+        '
+        Me.VerwaltenToolStripMenuItem.Name = "VerwaltenToolStripMenuItem"
+        Me.VerwaltenToolStripMenuItem.Size = New System.Drawing.Size(217, 22)
+        Me.VerwaltenToolStripMenuItem.Text = "verwalten"
         '
         'Main
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(985, 502)
-        Me.Controls.Add(Me.StatusStrip1)
+        Me.Controls.Add(Me.GroupBox1)
         Me.Controls.Add(Me.MenuStrip1)
         Me.Icon = CType(resources.GetObject("$this.Icon"), System.Drawing.Icon)
         Me.IsMdiContainer = True
@@ -185,8 +226,7 @@ Partial Class Main
         Me.Text = "YT-Get by X-Effekt"
         Me.MenuStrip1.ResumeLayout(False)
         Me.MenuStrip1.PerformLayout()
-        Me.StatusStrip1.ResumeLayout(False)
-        Me.StatusStrip1.PerformLayout()
+        Me.GroupBox1.ResumeLayout(False)
         Me.ResumeLayout(False)
         Me.PerformLayout()
 
@@ -199,9 +239,6 @@ Partial Class Main
     Friend WithEvents ToolStripSeparator1 As System.Windows.Forms.ToolStripSeparator
     Friend WithEvents ImportierenToolStripMenuItem As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents Speicherort As System.Windows.Forms.ToolStripComboBox
-    Friend WithEvents StatusStrip1 As System.Windows.Forms.StatusStrip
-    Friend WithEvents ProgressBar1 As System.Windows.Forms.ToolStripProgressBar
-    Friend WithEvents StatusLabel1 As System.Windows.Forms.ToolStripStatusLabel
     Friend WithEvents ToolStripSeparator2 As System.Windows.Forms.ToolStripSeparator
     Friend WithEvents DownloaderToolStripMenuItem1 As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents ToolStripSeparator3 As System.Windows.Forms.ToolStripSeparator
@@ -210,4 +247,12 @@ Partial Class Main
     Friend WithEvents ExtrasToolStripMenuItem As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents EinstellungenToolStripMenuItem As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents BestandslisteErstellenToolStripMenuItem As System.Windows.Forms.ToolStripMenuItem
+    Friend WithEvents GroupBox1 As System.Windows.Forms.GroupBox
+    Friend WithEvents ListView1 As System.Windows.Forms.ListView
+    Friend WithEvents ch_lfd As System.Windows.Forms.ColumnHeader
+    Friend WithEvents ch_source As System.Windows.Forms.ColumnHeader
+    Friend WithEvents ch_type As System.Windows.Forms.ColumnHeader
+    Friend WithEvents ch_Message As System.Windows.Forms.ColumnHeader
+    Friend WithEvents NotifyIcon1 As System.Windows.Forms.NotifyIcon
+    Friend WithEvents VerwaltenToolStripMenuItem As System.Windows.Forms.ToolStripMenuItem
 End Class

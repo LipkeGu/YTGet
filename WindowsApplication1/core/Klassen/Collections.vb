@@ -125,13 +125,13 @@ Public Class Collections
                     End With
 
                     If col.Einträge > 0 Then
-                        MsgBox("Speicherort """ & col.Name & """ wurde erfolgreich hinzugefügt und enthält " & col.Einträge.ToString & " Dateien!", MsgBoxStyle.Information)
+                        Main.Eventlog.AddEvent("Collections", EventType.information, "Speicherort " & Chr(34) & col.Name & Chr(34) & " wurde erfolgreich hinzugefügt und enthält " & col.Einträge.ToString & " Dateien!")
                     Else
-                        MsgBox("Speicherort """ & col.Name & """ wurde erfolgreich angelegt!", MsgBoxStyle.Information)
+                        Main.Eventlog.AddEvent("Collections", EventType.information, "Speicherort """ & col.Name & """ wurde erfolgreich angelegt!")
                     End If
 
                 Else
-                    MsgBox("Dieser Speicherort darf nicht Teil einer anderen Collection sein!", MsgBoxStyle.Critical)
+                    Main.Eventlog.AddEvent("Collections", EventType.Exception, "Dieser Speicherort darf nicht Teil einer anderen Collection sein!")
                 End If
             End If
         End If
@@ -199,7 +199,7 @@ Public Class Collections
                     End If
                 Next
 
-                MsgBox(col.Name & " wurde entfernt!", MsgBoxStyle.Information)
+                Main.Eventlog.AddEvent("Collections", EventType.information, col.Name & " wurde entfernt!")
 
                 Collections.Remove(col)
             End If
@@ -224,7 +224,7 @@ Public Class Collections
                         End If
                     Next
 
-                    MsgBox(col.Name & " wurde entfernt!", MsgBoxStyle.Information)
+                    Main.Eventlog.AddEvent("Collections", EventType.information, col.Name & " wurde entfernt!")
                     Collections.Remove(col)
                     Exit For
                 End If
@@ -250,7 +250,7 @@ Public Class Collections
                         End If
                     Next
 
-                    MsgBox(col.Name & " wurde entfernt!", MsgBoxStyle.Information)
+                    Main.Eventlog.AddEvent("Collections", EventType.information, col.Name & " wurde entfernt!")
                     Collections.Remove(col)
                     Exit For
                 End If
@@ -264,6 +264,7 @@ Public Class Collections
 
         If Directory.Exists(Main.Collections.Aktuelle_Sammlung.Path) Then
             sw1.WriteLine("Bestand von: " & Main.Collections.Aktuelle_Sammlung.Path & vbCrLf & vbCrLf)
+
             For Each Fil As FileInfo In dirinfo.GetFiles("*.mp3", SearchOption.AllDirectories)
                 If Fil.Exists Then
                     sw1.WriteLine(Fil.FullName)
@@ -271,14 +272,14 @@ Public Class Collections
             Next
 
             sw1.Close()
-            MsgBox("Bestand erstellt!", MsgBoxStyle.Information)
-        End If
+            Main.Eventlog.AddEvent("Collections", EventType.information, "Bestand erstellt, Datei ist: " & Main.Application_Directory & "\bestand.txt")
 
-        Dim p As New Process
-        With p
-            .StartInfo.FileName = Main.Application_Directory & "\bestand.txt"
-            .Start()
-        End With
+            Dim p As New Process
+            With p
+                .StartInfo.FileName = Main.Application_Directory & "\bestand.txt"
+                .Start()
+            End With
+        End If
     End Sub
 
 End Class

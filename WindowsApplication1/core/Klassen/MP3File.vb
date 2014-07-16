@@ -4,17 +4,21 @@
     Private _Bitrate As Integer = 0
     Private _duration As String = "00:00:00"
     Private _samprate As Integer = 0
+
     Private _exception As String = ""
-    Private _erroronread As Boolean = False
+    Private _error As Boolean = False
+    Private _isprotected As Boolean = False
     Private _target As String = ""
     Private _interpret As String = ""
     Private _Titel As String = ""
     Private _selected As Boolean = True
     Private _source As String = ""
+    Private _iscopyright As Boolean = False
     Private _FileSize As String = ""
     Private _duplicate As Boolean = False
     Private _md5duplicate As Boolean = False
     Private _hash As String = ""
+    Private _protected As String = ""
 
     Public Property targetfilename As String
         Get
@@ -28,22 +32,19 @@
 
     Public ReadOnly Property BadHeader As Boolean
         Get
-            Return _erroronread
+            Return _error
         End Get
     End Property
 
-    Public ReadOnly Property Exception As String
+    Public ReadOnly Property Copyrighted As Boolean
         Get
-            Return _exception
+            Return _iscopyright
         End Get
     End Property
 
-    Public Property Artist As String
-        Set(value As String)
-            _interpret = value
-        End Set
+    Public ReadOnly Property SamplingRate As Integer
         Get
-            Return _interpret
+            Return _samprate
         End Get
     End Property
 
@@ -68,6 +69,33 @@
     Public ReadOnly Property Bitrate As Integer
         Get
             Return _Bitrate
+        End Get
+    End Property
+
+    Public ReadOnly Property Exception As String
+        Get
+            Return _exception
+        End Get
+    End Property
+
+    Public ReadOnly Property Protection As String
+        Get
+            Return _protected
+        End Get
+    End Property
+
+    Public ReadOnly Property isProtected As Boolean
+        Get
+            Return _isprotected
+        End Get
+    End Property
+
+    Public Property Artist As String
+        Set(value As String)
+            _interpret = value
+        End Set
+        Get
+            Return _interpret
         End Get
     End Property
 
@@ -128,7 +156,8 @@
         End Get
     End Property
 
-    Sub New(ByVal Interpret As String, ByVal Title As String, ByVal Source As String, ByVal size As String, ByVal md5duplicate As Boolean)
+    Sub New(ByVal Interpret As String, ByVal Title As String, ByVal Source As String, ByVal size As String, ByVal md5duplicate As Boolean, ByVal target As String)
+
         If Interpret.Length > 1 Then
             _interpret = Interpret
         End If
@@ -137,16 +166,16 @@
             _Titel = Title
         End If
 
-        If Source.Length > 1 Then
-            _source = Source
-        End If
-
         If size.Length > 1 Then
             _FileSize = size
         End If
 
         If _interpret.Length > 0 AndAlso _Titel.Length > 0 Then
-            _target = _interpret & "\" & _interpret & " - " & _Titel & ".mp3"
+            _target = target & _interpret & "\" & _interpret & " - " & _Titel & ".mp3"
+        End If
+
+        If Source.Length > 1 Then
+            _source = Source
         End If
 
         _hash = Main.FileIO.MD5FileHash(_source)
@@ -157,15 +186,39 @@
             _Bitrate = CInt((mp3info.GetBitrate() / 1000))
             _duration = mp3info.GetDurationString
             _isVBR = mp3info.IsVBR
+            _samprate = mp3info.GetSamplingRateFreq
+
+            Select Case mp3info.GetProtection
+                Case YTGet.MP3Info.ProtectionType.NotProtected
+                    _protected = "Nein"
+                    _isprotected = False
+                Case YTGet.MP3Info.ProtectionType.ProtectedByCRC
+                    _protected = "Ja CRC"
+                    _isprotected = True
+                Case Else
+                    _protected = "Unbekannter Kopierschutz!"
+                    _isprotected = True
+            End Select
+
+            Select Case mp3info.GetCopyRight()
+                Case YTGet.MP3Info.CopyRight.CopyRighted
+                    _iscopyright = True
+                Case YTGet.MP3Info.CopyRight.NotCopyRighted
+                    _iscopyright = False
+            End Select
+
         Catch ex As Exception
             _Bitrate = 0
-            _duration = "00:00"
-            _isVBR = True
+            _duration = "Fehler!"
+            _isVBR = False
+            _error = True
+            _isprotected = False
+            _iscopyright = False
+            _samprate = 0
             _exception = ex.Message
-            _erroronread = True
+            _selected = False
         End Try
 
     End Sub
-
 
 End Class
