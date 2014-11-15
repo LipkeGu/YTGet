@@ -243,14 +243,9 @@ Public Class Youtube_libary
                             vname = Replace(Mid(CStr(url), CStr(url).LastIndexOf("/") + 1), ".mp3", "")
                             GetContentinfo(CStr(url), "Unbekannt", vname, source)
 
-                        Else
-                            vname = Mid(CStr(url), CStr(url).LastIndexOf("/") + 1)
-
-                            If vname.ToLower.Contains("ffmpeg") Then
-                                vname = "ffmpeg-latest-win32-static.7z"
-                            End If
-
-                            GetContentinfo(CStr(url), "Unbekannt", vname, source)
+						Else
+							vname = Mid(CStr(url), CStr(url).LastIndexOf("/") + 1)
+							GetContentinfo(CStr(url), "Unbekannt", vname, source)
                         End If
                     Else
                         Download_Manager.Error_Handler.AddEvent("Download-Manager", EventType.Exception, "Server gab einen Fehler zurück: " & _req.StatusCode.ToString)
@@ -282,11 +277,9 @@ Public Class Youtube_libary
 
                     If source = "YouTube" AndAlso _req.ContentType.Contains("application/") Then
                         _t = "video/mp4"
-                    Else
-                        _req.Close()
-                        RaiseEvent releaseButtons(True)
-                        Exit Sub
-                    End If
+					End If
+
+					_req.Close()
 
                     If _t.Contains("video/") Or _t.Contains("audio/") Or _t.Contains("application/") Then
                         GetMovieinfo(videoname, source, CStr(_ytweb.ConvertContentLength(_req.ContentLength)), Downloadlink, _t, quality)
@@ -298,8 +291,8 @@ Public Class Youtube_libary
                 End If
 
                 _req.Close()
-            Else
-                Throw New Exception("[Debug] Downloader is nothing while determaining the Content!")
+			Else
+				Download_Manager.Error_Handler.AddEvent("Download-Manager", EventType.Exception, "Downloader can not detect the Content!")
             End If
         Else
             Download_Manager.Error_Handler.AddEvent("Download-Manager", EventType.Exception, "Fehler in der URL: " & Downloadlink)

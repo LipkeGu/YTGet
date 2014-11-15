@@ -11,9 +11,9 @@ Public Class YTFileIO
             Dim _tmp As String = Replace(FileName, ".mp3", "")
 
             If File.Exists(FileName) Then
-                If File.Exists(FileName) Then
-                    TargetExist = True
-                End If
+				If File.Exists(_tmp) Then
+					TargetExist = True
+				End If
 
                 If TargetExist = True Then
                     For i As Integer = 1 To 999 Step 1
@@ -103,19 +103,24 @@ Public Class YTFileIO
         Dim Result As String = ""
         Dim Tmp As String = ""
 
-        Dim FN As New FileStream(sFile, FileMode.Open, FileAccess.Read, FileShare.Read, 8192)
-        MD5.ComputeHash(FN)
-        FN.Close()
+		Try
+			Dim FN As New FileStream(sFile, FileMode.Open, FileAccess.Read, FileShare.Read, 8192)
+			MD5.ComputeHash(FN)
+			FN.Close()
 
-        Hash = MD5.Hash
+			Hash = MD5.Hash
 
-        For i As Integer = 0 To Hash.Length - 1
-            Tmp = Hex(Hash(i))
-            If Len(Tmp) = 1 Then Tmp = "0" & Tmp
-            Result += Tmp
-        Next
+			For i As Integer = 0 To Hash.Length - 1
+				Tmp = Hex(Hash(i))
+				If Len(Tmp) = 1 Then Tmp = "0" & Tmp
+				Result += Tmp
+			Next
 
-        Return Result
+			Return Result
+		Catch ex As Exception
+			Return Result
+		End Try
+
     End Function
 
     Public Function write(ByVal path As String, ByVal _line As String, Optional append As Boolean = True) As Boolean
@@ -134,7 +139,8 @@ Public Class YTFileIO
                     With sw1
                         .AutoFlush = True
                         .WriteLine(_line)
-                        .Close()
+						.Close()
+						.Dispose()
                         Return True
                     End With
                 Catch ex As Exception
