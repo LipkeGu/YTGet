@@ -64,9 +64,9 @@
 
     Private Sub audio_bitrate_SelectedIndexChanged(sender As Object, e As EventArgs) Handles audio_bitrate.SelectedIndexChanged
         If audio_bitrate.SelectedItem IsNot Nothing Then
-            Main.MP3_Bitrate = CStr(audio_bitrate.SelectedItem)
+			Main.MP3_Bitrate = CInt(audio_bitrate.SelectedItem)
         Else
-            Main.MP3_Bitrate = "192"
+			Main.MP3_Bitrate = 128
         End If
     End Sub
 

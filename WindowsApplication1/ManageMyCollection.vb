@@ -1,39 +1,58 @@
 ﻿Imports System.IO
 
 Public Class ManageMyCollection
-    Dim WithEvents importer As New MediaImporter
+	Dim WithEvents importer As New MediaImporter
+	Dim onlymorethanonefiles As Boolean = False
 
-    Private Sub ToolStripButton1_Click(sender As Object, e As EventArgs) Handles ToolStripButton1.Click
-        Dim _dirinfo As New System.IO.DirectoryInfo(Main.Collections.Aktuelle_Sammlung.Path)
-        ListView1.Items.Clear()
-        ListView1.Enabled = False
-        TreeView1.Nodes.Clear()
-        TreeView1.ImageIndex = 0
+	Private Sub ToolStripButton1_Click(sender As Object, e As EventArgs) Handles ToolStripButton1.Click
+		Dim _dirinfo As New System.IO.DirectoryInfo(Main.Collections.Aktuelle_Sammlung.Path)
+		Dim minfilecount As Integer = 1
 
-        For Each Dir As System.IO.DirectoryInfo In _dirinfo.GetDirectories()
-            Dim _foundfiles As Integer = 0
 
-            For Each fil As FileInfo In Dir.GetFiles("*.mp3", SearchOption.AllDirectories)
-                If fil.Exists = True Then
-                    If fil.Length > 0 Then
-                        _foundfiles = _foundfiles + 1
-                    End If
-                End If
-            Next
+		If onlymorethanonefiles = True Then
+			minfilecount = 2
+		End If
 
-            If Dir.Exists = True AndAlso _foundfiles > 0 Then
-                Dim TN As New TreeNode
+		ListView1.Items.Clear()
+		ListView1.Enabled = False
 
-                With TN
-                    .Tag = Dir.FullName
-                    .Text = Dir.Name
-                    .ImageIndex = 0
-                End With
+		TreeView1.Nodes.Clear()
+		TreeView1.ImageIndex = 0
 
-                TreeView1.Nodes.Add(TN)
-            End If
-        Next
-    End Sub
+
+
+		Dim TNCur As New TreeNode
+
+		With TNCur
+			.Tag = _dirinfo.FullName
+			.Text = "."
+			.ImageIndex = 0
+		End With
+
+		TreeView1.Nodes.Add(TNCur)
+
+		For Each Dir As System.IO.DirectoryInfo In _dirinfo.GetDirectories()
+			Dim _foundfiles As Integer = 0
+
+			For Each fil As FileInfo In Dir.GetFiles("*.mp3", SearchOption.AllDirectories)
+				If fil.Exists = True AndAlso fil.Length >= minfilecount Then
+					_foundfiles = _foundfiles + 1
+				End If
+			Next
+
+			If Dir.Exists = True AndAlso _foundfiles >= minfilecount Then
+				Dim TN As New TreeNode
+
+				With TN
+					.Tag = Dir.FullName
+					.Text = Dir.Name
+					.ImageIndex = 0
+				End With
+
+				TreeView1.Nodes.Add(TN)
+			End If
+		Next
+	End Sub
 
     Private Sub TreeView1_AfterSelect(sender As Object, e As TreeViewEventArgs) Handles TreeView1.AfterSelect
         If TreeView1.SelectedNode IsNot Nothing Then
@@ -105,71 +124,53 @@ Public Class ManageMyCollection
                 Dim _NewPath As String = ""
                 Dim _targetexist As Boolean = True
                 Dim _Question As String = "Das Verzeichnis wurde Umbenannt, sollen die Interpreten-Einträge an den neuen Verzeichnisnamen angepasst werden?"
-                Dim dir As New DirectoryInfo(_Curpath)
+				Dim dir As New DirectoryInfo(_Curpath)
+
                 Try
-                    If Not Newname = _curname Then
-                        If Newname.Length > 1 Then
-                            If Directory.Exists(_Curpath) Then
-                                If Not _Curpath = dir.Parent.FullName & "\" & Newname Then
+					If Not Newname = _curname AndAlso Newname.Length > 1 AndAlso Directory.Exists(_Curpath) AndAlso Not _Curpath = dir.Parent.FullName & "\" & Newname Then
+						_NewPath = dir.Parent.FullName & "\" & Newname
 
-                                    _NewPath = dir.Parent.FullName & "\" & Newname
+						If Not Directory.Exists(dir.Parent.FullName & "\" & Newname) Then
+							_targetexist = False
+						Else
+							_targetexist = True
+						End If
 
-                                    If Not Directory.Exists(dir.Parent.FullName & "\" & Newname) Then
-                                        _targetexist = False
-                                    Else
-                                        _targetexist = True
-                                    End If
+						If _targetexist = False Then
+							Directory.CreateDirectory(dir.Parent.FullName & "\" & Newname)
+						Else
+							Main.Eventlog.AddEvent("MediaManager", EventType.Warning, "Ziel existiert bereits, Inhalt wird zusammengeführt!")
+						End If
 
-                                    If _targetexist = False Then
-                                        Directory.CreateDirectory(dir.Parent.FullName & "\" & Newname)
-                                    End If
+						For Each fil As FileInfo In dir.GetFiles("*.mp3", SearchOption.AllDirectories)
+							If fil.Exists = True AndAlso fil.Length > 0 Then
+								Main.FileIO.Move(fil.FullName, _NewPath & "\" & fil.Name & fil.Extension)
+							End If
+						Next
 
-                                    For Each fil As FileInfo In dir.GetFiles("*.mp3", SearchOption.AllDirectories)
-                                        If fil.Exists = True Then
-                                            If fil.Length > 0 Then
-                                                Main.FileIO.Move(fil.FullName, _NewPath & "\" & fil.Name)
-                                            End If
-                                        End If
-                                    Next
+						Main.Eventlog.AddEvent("MediaManager", EventType.information, "Der Inhalt von " & Chr(34) & _Curpath & Chr(34) & " wurde nach " & Chr(34) & dir.Parent.FullName & "\" & Newname & Chr(34) & " verschoben!")
 
-                                    Main.Eventlog.AddEvent("MediaManager", EventType.information, "Der Inhalt von " & Chr(34) & _Curpath & Chr(34) & " wurde nach " & Chr(34) & dir.Parent.FullName & "\" & Newname & Chr(34) & " verschoben!")
+						If _targetexist = True AndAlso Directory.Exists(_Curpath) AndAlso Main.FileIO.GetFileCount(_Curpath, "*.mp3", SearchOption.AllDirectories) = 0 Then
+							Directory.Delete(_Curpath)
+							TreeView1.SelectedNode.Remove()
+							Main.Eventlog.AddEvent("MediaManager", EventType.Warning, "Das alte leere Verzeichnis wurde gelöscht!")
+						Else
+							Main.Eventlog.AddEvent("MediaManager", EventType.Warning, "Das alte leere Verzeichnis wurde nicht gelöscht, da sich noch Dateien in diesem Verzeichnis befinden!")
+						End If
+					Else
+						Throw New Exception("Quelle und Ziel sind Identisch!")
+					End If
+				Catch ex As Exception
+					Main.Eventlog.AddEvent("MediaManager", EventType.Exception, ex.Message)
+				End Try
+			End With
 
-                                    If _targetexist = True Then
-                                        Main.Eventlog.AddEvent("MediaManager", EventType.Debug, "[Var] _Curpath = " & _Curpath)
-                                        If Directory.Exists(_Curpath) AndAlso Not _Curpath = _NewPath Then
-                                            If Main.FileIO.GetFileCount(_Curpath, "*.mp3", SearchOption.AllDirectories) = 0 Then
-                                                Directory.Delete(_Curpath)
-                                                Main.Eventlog.AddEvent("MediaManager", EventType.Warning, "Das alte leere Verzeichnis wurde gelöscht!")
-                                                TreeView1.SelectedNode.Remove()
-                                            Else
-                                                Main.Eventlog.AddEvent("MediaManager", EventType.Warning, "Das alte leere Verzeichnis wurde nicht gelöscht, da sich noch Dateien in diesem Verzeichnis befinden!")
-                                            End If
-                                        End If
-                                    End If
-                                Else
-                                    Throw New Exception("Quelle und Ziel sind Identisch!")
-                                End If
-                            Else
-                                Throw New Exception("Der Pfad " & Chr(34) & _Curpath & Chr(34) & " existiert nicht!")
-                            End If
-                        Else
-                            Throw New Exception("Der Name muss mindestens 1 Zeichen enthalten!")
-                        End If
-                    Else
-                        Throw New Exception("Das Verzeichnis hat bereits diesen Namen!")
-                    End If
-                Catch ex As Exception
-                    Main.Eventlog.AddEvent("MediaManager", EventType.Exception, ex.Message)
-                End Try
-
-            End With
-
-            TreeView1.Enabled = True
-            ListView1.Enabled = True
-        Else
-            ListView1.Items.Clear()
-            ListView1.Enabled = False
-        End If
+			TreeView1.Enabled = True
+			ListView1.Enabled = True
+		Else
+			ListView1.Items.Clear()
+			ListView1.Enabled = False
+		End If
     End Sub
 
     Private Sub ManageMyCollection_Load(sender As Object, e As EventArgs) Handles MyBase.Load
@@ -180,17 +181,48 @@ Public Class ManageMyCollection
         If ListView1.Items.Count > 0 AndAlso TreeView1.SelectedNode IsNot Nothing Then
             Dim _Curpath As String = CStr(TreeView1.SelectedNode.Tag)
 
-            For Each item As ListViewItem In ListView1.Items
-                With item
-                    .SubItems(1).Text = TreeView1.SelectedNode.Text
-                    If Main.FileIO.Move(.SubItems(5).Text, _Curpath & "\" & .SubItems(1).Text & " - " & .SubItems(2).Text & ".mp3", False) = False Then
-                        Main.Eventlog.AddEvent("MediaManager", EventType.Warning, "Datei " & .SubItems(5).Text & "kann nicht umbenannt werden!")
-                    Else
-                        .SubItems(5).Text = _Curpath & "\" & .SubItems(1).Text & " - " & .SubItems(2).Text & ".mp3"
-                        Main.Eventlog.AddEvent("MediaManager", EventType.information, "Datei " & .SubItems(5).Text & " wurde Umbenannt!")
-                    End If
-                End With
-            Next
+			For Each item As ListViewItem In ListView1.Items
+				If item Is Nothing Then Continue For
+
+				With item
+					.SubItems(1).Text = TreeView1.SelectedNode.Text
+					If Main.FileIO.Move(.SubItems(5).Text, _Curpath & "\" & .SubItems(1).Text & " - " & .SubItems(2).Text & ".mp3", False) = False Then
+						Main.Eventlog.AddEvent("MediaManager", EventType.Warning, "Datei " & .SubItems(5).Text & "kann nicht umbenannt werden!")
+					Else
+						.SubItems(5).Text = _Curpath & "\" & .SubItems(1).Text & " - " & .SubItems(2).Text & ".mp3"
+						Main.Eventlog.AddEvent("MediaManager", EventType.information, "Datei " & .SubItems(5).Text & " wurde Umbenannt!")
+					End If
+				End With
+			Next
         End If
     End Sub
+
+	Private Sub LöschenToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles LöschenToolStripMenuItem.Click
+		If ListView1.Items.Count > 0 AndAlso TreeView1.SelectedNode IsNot Nothing Then
+			Dim _Curpath As String = CStr(TreeView1.SelectedNode.Tag)
+
+			If Directory.Exists(_Curpath) AndAlso Not TreeView1.SelectedNode.Text = "." Then
+
+				Directory.Delete(_Curpath)
+				Main.Eventlog.AddEvent("MediaManager", EventType.information, "Verzeichnis " & TreeView1.SelectedNode.Text & " wurde entfernt!")
+				TreeView1.SelectedNode.Remove()
+			End If
+		End If
+	End Sub
+
+	Private Sub DateiLöschen_Click(sender As Object, e As EventArgs) Handles DateiLöschen.Click
+		If ListView1.Items.Count > 0 AndAlso ListView1.FocusedItem.SubItems(5).Text IsNot Nothing Then
+			Dim _Curpath As String = CStr(ListView1.FocusedItem.SubItems(5).Text)
+
+			If File.Exists(_Curpath) Then
+				File.Delete(_Curpath)
+				Main.Eventlog.AddEvent("MediaManager", EventType.information, "Datei " & _Curpath & " wurde entfernt!")
+				ListView1.FocusedItem.Remove()
+			End If
+		End If
+	End Sub
+
+	Private Sub CheckBox1_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox1.CheckedChanged
+		onlymorethanonefiles = CheckBox1.Checked
+	End Sub
 End Class

@@ -31,35 +31,41 @@ Class Downloads
 #End Region
 
     Public Sub Add_Download(ByVal source As String, ByVal target As String, ByVal identifider As Integer)
-        If Current_Downloads.Count < Main.max_Downloads Then
-            SyncLock lock
-                Dim dl As New Download(source, target, identifider)
 
-                With dl
-                    ._reference = dl
-                    AddHandler .Download_started, AddressOf Begonnen
-                    AddHandler .Download_completed, AddressOf Fertig
-                    AddHandler .Download_Process_changed, AddressOf Fortschritt
-                End With
+		SyncLock lock
+			Dim dl As New Download(source, target, identifider)
 
-                Current_Downloads.Add(dl)
-                Main.Eventlog.AddEvent("Download-Manager", EventType.information, "Download hinzugefügt!")
-            End SyncLock
-        End If
+			With dl
+				._reference = dl
+				AddHandler .Download_started, AddressOf Begonnen
+				AddHandler .Download_completed, AddressOf Fertig
+				AddHandler .Download_Process_changed, AddressOf Fortschritt
+			End With
+
+			Current_Downloads.Add(dl)
+			Main.Eventlog.AddEvent("Download-Manager", EventType.information, "Download hinzugefügt!")
+		End SyncLock
     End Sub
 
     Public Sub Cancel()
-        For i As Integer = Current_Downloads.Count - 1 To 0 Step 1
-            If Current_Downloads.Item(i) IsNot Nothing Then
-                If Current_Downloads.Item(i).Fertig = False Then
-                    Current_Downloads.Item(i).Cancel_Download()
-                    If File.Exists(Current_Downloads.Item(i).Ziel) Then
-                        File.Delete(Current_Downloads.Item(i).Ziel)
-                    End If
-                    Exit For
-                End If
-            End If
-        Next
+		For i As Integer = Current_Downloads.Count - 1 To 0
+			Try
+				If Current_Downloads.Item(i) IsNot Nothing Then
+					If Current_Downloads.Item(i).Fertig = False Then
+						Current_Downloads.Item(i).Cancel_Download()
+
+						If File.Exists(Current_Downloads.Item(i).Ziel) Then
+							File.Delete(Current_Downloads.Item(i).Ziel)
+							Remove(Current_Downloads.Item(i))
+						End If
+
+						Exit For
+					End If
+				End If
+			Catch ex As Exception
+
+			End Try
+		Next
 
     End Sub
 
@@ -94,7 +100,7 @@ Class Downloads
             If File.Exists(ref.Ziel) Then
                 If ref.Ziel.Contains(".mp4") Or ref.Ziel.Contains(".flv") AndAlso File.Exists(Main.converter.konverter_path) Then
                     Download_Manager.DL_Listview.Items.Item(ref.Id).SubItems(3).Text = "Konvertiere"
-                    Download_Manager.converter.convertToMP3(ref.Ziel, target, Main.MP3_Bitrate, ref.Id.ToString)
+					Download_Manager.converter.convertToMP3(ref.Ziel, target, Main.MP3_Bitrate, ref.Id)
                 End If
 
                 RaiseEvent Download_Fertig(ref)
@@ -107,7 +113,8 @@ Class Downloads
             Download_Manager.cancel_all_downloads.Enabled = False
             Download_Manager.download.Enabled = True
 
-            Download_Manager.DL_Listview.Items.Item(ref.Id).SubItems(3).Text = "Fertig"
+			Download_Manager.DL_Listview.Items.Item(ref.Id).SubItems(3).Text = "Fertig"
+			Current_Downloads.Remove(ref)
         End If
 
         Main.canceling = False
@@ -257,7 +264,6 @@ Class Download
 
     Private Sub _completed(sender As Object, e As System.ComponentModel.AsyncCompletedEventArgs)
         RaiseEvent Download_completed(_reference)
-
     End Sub
 
     Public Sub Cancel_Download()

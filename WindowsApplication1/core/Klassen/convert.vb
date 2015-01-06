@@ -9,39 +9,40 @@ Public Class convert
     Public Event Position(ByVal position As String, ByVal id As Integer)
     Public Event Completed(ByVal id As Integer)
 
-    Public Sub convertToMP3(ByVal source As String, ByVal target As String, ByVal ab As String, ByVal DL_entryID As String)
-        If File.Exists(konverter_path) Then
-            Dim pargs As String = ""
-            target = _CleanReplace.replacechars(target, "Target-Filename")
+	Public Function convertToMP3(ByVal source As String, ByVal target As String, ByVal ab As Integer, Optional DL_entryID As Integer = -1) As Integer
+		If File.Exists(konverter_path) Then
+			Dim pargs As String = ""
+			target = _CleanReplace.replacechars(target, "Target-Filename")
 
-            If System.IO.File.Exists(target) Then
-                Main.Eventlog.AddEvent("Download-Manager", EventType.Warning, "Die Ziel-Datei " & Chr(34) & target & Chr(34) & " ist bereits vorhanden!")
-                System.IO.File.Delete(target)
-                Main.Eventlog.AddEvent("Download-Manager", EventType.information, "Die Ziel-Datei " & Chr(34) & target & Chr(34) & " wurde gelöscht!")
-            End If
+			If System.IO.File.Exists(target) Then
+				Main.Eventlog.AddEvent("Konverter", EventType.Warning, "Die Ziel-Datei " & Chr(34) & target & Chr(34) & " ist bereits vorhanden!")
+				System.IO.File.Delete(target)
+				Main.Eventlog.AddEvent("Konverter", EventType.information, "Die Ziel-Datei " & Chr(34) & target & Chr(34) & " wurde gelöscht!")
+			End If
 
-            source = Replace(source, "  ", " ")
+			source = Replace(source, "  ", " ")
 
-            If Main.forcedb_normalize Then
-                pargs = "-i " & Chr(34) & source & Chr(34) & " -vol 89 -ar " & Main.MP3_samprate & " -ab " & ab & "k " & Chr(34) & target & Chr(34) & "#" & DL_entryID
-            Else
-                pargs = "-i " & Chr(34) & source & Chr(34) & " -ar " & Main.MP3_samprate & " -ab " & ab & "k " & Chr(34) & target & Chr(34) & "#" & DL_entryID
-            End If
+			If Main.forcedb_normalize Then
+				pargs = "-i " & Chr(34) & source & Chr(34) & " -vol " & Main.audio_volume & " -ar " & Main.MP3_samprate & " -ab " & CStr(Main.MP3_Bitrate) & "k " & Chr(34) & target & Chr(34) & "#" & CStr(DL_entryID)
+			Else
+				pargs = "-i " & Chr(34) & source & Chr(34) & " -ar " & Main.MP3_samprate & " -ab " & CStr(Main.MP3_Bitrate) & "k " & Chr(34) & target & Chr(34) & "#" & CStr(DL_entryID)
+			End If
 
-            Download_Manager.DL_Listview.Items.Item(CInt(DL_entryID)).SubItems(3).Text = "Konvertiere"
+			Dim t As New Thread(AddressOf convert_dowork)
+			Main.Eventlog.AddEvent("Konverter", EventType.information, "Datei wird konvertiert... Parameter: " & pargs)
+			With t
+				.IsBackground = True
+				.Start(CObj(pargs))
+			End With
 
+			Return 0
+		Else
+			Main.Eventlog.AddEvent("Konverter", EventType.Exception, "Die Datei " & Chr(34) & konverter_path & Chr(34) & " ist nicht vorhanden!!")
+			RaiseEvent Completed(DL_entryID)
 
-            Dim t As New Thread(AddressOf convert_dowork)
-            Main.Eventlog.AddEvent("Download", EventType.information, "Datei wird konvertiert... Parameter: " & pargs)
-            With t
-                .IsBackground = True
-                .Start(CObj(pargs))
-            End With
-        Else
-            Main.Eventlog.AddEvent("Download-Manager", EventType.Exception, "Die Datei " & Chr(34) & konverter_path & Chr(34) & " ist nicht vorhanden!!")
-            RaiseEvent Completed(CInt(DL_entryID))
-        End If
-    End Sub
+			Return 1
+		End If
+	End Function
 
     Private Sub convert_dowork(ByVal e As Object)
         Dim Arguments() As String = CType(e, String).Split(CChar("#"))
@@ -63,9 +64,9 @@ Public Class convert
                 .StartInfo.RedirectStandardError = True
                 Dim Process_msg_line As String = ""
 
-
-
-                .Start()
+				.Start()
+				ImportTo_Collection.curconvert_count = 1
+				ImportTo_Collection.weitergehts = False
 
                 While .StandardError.EndOfStream = False
                     Process_msg_line = .StandardError.ReadLine
@@ -90,9 +91,12 @@ Public Class convert
                 End While
 
                 .WaitForExit()
-                .Dispose()
-            End With
-        End If
+				.Dispose()
+
+			End With
+		End If
+		ImportTo_Collection.curconvert_count = 0
+		ImportTo_Collection.weitergehts = True
         RaiseEvent Completed(CInt(Arguments(1)))
     End Sub
 

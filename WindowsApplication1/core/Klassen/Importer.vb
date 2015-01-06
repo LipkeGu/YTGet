@@ -8,7 +8,7 @@ Public Class MediaImporter
     Public Event Completed(ByVal filcount As Integer)
     Public Event started(ByVal filecount As Integer)
     Dim target As String = ""
-    Public Event ProvessChanged(ByVal f As String, ByVal count As Integer, type As Integer)
+	Public Event ProgessChanged(ByVal f As String, ByVal count As Integer, type As Integer)
     Public Event Exception(ex As String, ByVal type As Integer)
     Public filestoread As Integer = 0
     Public ignoreprotectedfiles As Boolean = True
@@ -23,7 +23,7 @@ Public Class MediaImporter
             t.IsBackground = True
             t.Start(CObj(target))
         Else
-            Throw New DirectoryNotFoundException
+			Throw New DirectoryNotFoundException("Verzeichnis nich gefunden: " & path)
         End If
     End Sub
 
@@ -31,91 +31,90 @@ Public Class MediaImporter
         If filestoread > 0 Then
             RaiseEvent started(filestoread)
         End If
+		Dim _dirinfo As New DirectoryInfo(CType(_path, String))
 
-        Dim _dirinfo As New DirectoryInfo(CType(_path, String))
-        SyncLock Main.lock
-            For Each fil As FileInfo In _dirinfo.GetFiles("*.mp3", SearchOption.AllDirectories)
-                'Try
-                If fil.Exists = True AndAlso fil.Length > 0 Then
-                    Dim fn_parts() As String
-                    Dim _strpos As Integer = 0
-                    Dim Artist As String = ""
-                    Dim Title As String
+		SyncLock Main.lock
+			For Each fil As FileInfo In _dirinfo.GetFiles("*.mp3", SearchOption.AllDirectories)
+				'Try
+				If fil.Exists = True AndAlso fil.Length > 0 Then
+					Dim fn_parts() As String
+					Dim _strpos As Integer = 0
+					Dim Artist As String = ""
+					Dim Title As String = ""
 
-                    If fil.Name.Contains("-") Then
-                        fn_parts = fil.Name.Split(CChar("-"))
-                        _strpos = fil.Name.ToLower.IndexOf("-") + 1
+					If fil.Name.Contains("-") Then
+						fn_parts = fil.Name.Split(CChar("-"))
+						_strpos = fil.Name.ToLower.IndexOf("-") + 1
 
-                        If fn_parts.Length > 1 Then ' wir haben Artist und titel...
-                            If fn_parts.Length > 2 Then ' moment da war noch 1 "-"...
-                                If _strpos < 3 AndAlso fil.Name.ToLower.LastIndexOf("-") > 2 Then
-                                    fn_parts(0) = Trim(fn_parts(0)) & " - " & Trim(fn_parts(1))
+						If fn_parts.Length > 1 Then	' wir haben Artist und Titel...
+							If fn_parts.Length > 2 Then	' moment da war noch 1 "-"...
+								If _strpos < 3 AndAlso fil.Name.ToLower.LastIndexOf("-") > 2 Then
+									fn_parts(0) = Trim(fn_parts(0)) & " - " & Trim(fn_parts(1))
 
-                                    fn_parts(1) = ""
+									fn_parts(1) = ""
 
-                                    For ia As Integer = 2 To fn_parts.Length - 1 Step 1
-                                        If Not fn_parts(1) = "" Then
-                                            fn_parts(1) = Trim(fn_parts(1)) & " - " & Trim(fn_parts(ia))
-                                        Else
-                                            fn_parts(1) = Trim(fn_parts(1)) & Trim(fn_parts(ia))
-                                        End If
-                                    Next
-                                End If
-                            Else
-                                fn_parts(0) = Trim(Mid(fil.Name, 1, fil.Name.IndexOf("-")))
-                            End If
+									For ia As Integer = 2 To fn_parts.Length - 1 Step 1
+										If Not fn_parts(1) = "" Then
+											fn_parts(1) = Trim(fn_parts(1)) & " - " & Trim(fn_parts(ia))
+										Else
+											fn_parts(1) = Trim(fn_parts(1)) & Trim(fn_parts(ia))
+										End If
+									Next
+								End If
+							Else
+								fn_parts(0) = Trim(Mid(fil.Name, 1, fil.Name.IndexOf("-")))
+							End If
 
-                            For ia As Integer = 2 To fn_parts.Length - 1 Step 1
-                                If Not fn_parts(1) = "" Then
-                                    fn_parts(1) = Trim(fn_parts(1)) & " - " & Trim(fn_parts(ia))
-                                Else
-                                    fn_parts(1) = Trim(fn_parts(1)) & Trim(fn_parts(ia))
-                                End If
-                            Next
-                        End If
+							For ia As Integer = 2 To fn_parts.Length - 1 Step 1
+								If Not fn_parts(1) = "" Then
+									fn_parts(1) = Trim(fn_parts(1)) & " - " & Trim(fn_parts(ia))
+								Else
+									fn_parts(1) = Trim(fn_parts(1)) & Trim(fn_parts(ia))
+								End If
+							Next
+						End If
 
-                        For i As Integer = 0 To fn_parts.Length - 1 Step 1
-                            fn_parts(i) = Trim(Replace(fn_parts(i), fil.Extension, ""))
+						For i As Integer = 0 To fn_parts.Length - 1 Step 1
+							fn_parts(i) = Trim(Replace(fn_parts(i), fil.Extension, ""))
 
-                            If fn_parts(i).EndsWith("-") Then
-                                fn_parts(i) = Trim(Mid(fn_parts(i), 1, fn_parts(i).Length - 1))
-                            End If
+							If fn_parts(i).EndsWith("-") Then
+								fn_parts(i) = Trim(Mid(fn_parts(i), 1, fn_parts(i).Length - 1))
+							End If
 
-                            If i > 0 Then
-                                fn_parts(i) = Replace(fn_parts(i), fn_parts(0) & " - ", "")
-                                fn_parts(i) = Replace(fn_parts(i), fil.Extension, "")
-                            End If
-                        Next
+							If i > 0 Then
+								fn_parts(i) = Replace(fn_parts(i), fn_parts(0) & " - ", "")
+								fn_parts(i) = Replace(fn_parts(i), fil.Extension, "")
+							End If
+						Next
 
-                        Artist = fn_parts(0)
-                        Title = fn_parts(1)
-                    Else
-                        Artist = "Unbekannt - "
-                        Title = fil.Name
-                    End If
+						Artist = fn_parts(0)
+						Title = fn_parts(1)
+					Else
+						Artist = "Unbekannt - "
+						Title = fil.Name
+					End If
 
-                    Dim mp3 As New MP3File(Artist, Title, fil.FullName, Math.Round(fil.Length / 1024 / 1024, 2).ToString & " MB", False, target)
+					Dim mp3 As New MP3File(Artist, Title, fil.FullName, Math.Round(fil.Length / 1024 / 1024, 2).ToString & " MB", False, target)
 
+					If mp3 IsNot Nothing Then
+						RaiseEvent ProgessChanged(fil.FullName, filestoimport.Count, 1)
 
-                    If mp3 IsNot Nothing Then
-                        RaiseEvent ProvessChanged(fil.FullName, filestoimport.Count, 1)
+						If mp3.BadHeader = True Then
+							RaiseEvent Exception(mp3.Exception, 3)
+							mp3.selected = False
+						End If
 
-                        If mp3.BadHeader = True Then
-                            RaiseEvent Exception(mp3.Exception, 3)
-                            mp3.selected = False
-                        End If
-
-                        filestoimport.Add(mp3)
-                        If filestoimport.Count = filestoread Then Exit For
-                    End If
-                End If
-                ' Catch ex As Exception
-                '    
-                'End Try
-            Next
-        End SyncLock
-        RaiseEvent C(filestoimport.Count)
-    End Sub ' Dateien ansich einlesen...
+						filestoimport.Add(mp3)
+						If filestoimport.Count = filestoread Then Exit For
+					End If
+				End If
+				'Catch ex As Exception
+				'    
+				'End Try
+			Next
+		End SyncLock
+			RaiseEvent C(filestoimport.Count)
+	End Sub	' Dateien ansich einlesen...
 
     Private Sub MediaImporter_Completed(count As Integer) Handles Me.C
         Dim _duplicate As Boolean = False
@@ -177,7 +176,8 @@ Public Class MediaImporter
                                         End If
                                     End If
                                 End If
-                            End If
+							End If
+
                             Exit For
                         End If
                     Next
@@ -191,15 +191,15 @@ Public Class MediaImporter
                                 .Item(i1).Duplicate = True
                             End If
 
-
-                            If .Item(i1).MD5Duplicate = True Then
-                                filestoimport.Remove(.Item(i1))
-                            End If
+							If .Item(i1).MD5Duplicate = True Then
+								filestoimport.Remove(.Item(i1))
+							End If
                         End If
                     End If
                 End With
             Next
-        End SyncLock
+		End SyncLock
+
         filestoread = 0
         RaiseEvent Completed(filestoimport.Count)
     End Sub

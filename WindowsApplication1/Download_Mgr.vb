@@ -10,7 +10,7 @@ Public Class Download_Manager
     Dim WithEvents ytlib As New Youtube_libary
     Public WithEvents converter As New convert
     Dim download_active As Boolean = True
-    Dim weitergehts As Boolean = False
+	Public weitergehts As Boolean = False
     Dim ms As Integer = 1000
     Public statusliste As New List(Of ProgressBar)
 
@@ -184,31 +184,36 @@ Public Class Download_Manager
 
     End Sub
 
-    Private Sub wartezeit(ByVal sekunden As Integer)
-        Try
-            ms = sekunden * 1000
-            weitergehts = False
+	Public Sub wartezeit(ByVal sekunden As Integer)
+		Try
+			ms = sekunden * 1000
+			weitergehts = False
 
-            Dim t As Thread = New Thread(AddressOf warten)
+			Dim t As Thread = New Thread(AddressOf warten)
 
-            t.IsBackground = True
-            t.Start()
+			t.IsBackground = True
+			t.Start()
 
-            Do
-                Application.DoEvents()
-            Loop Until weitergehts = True
-        Catch ex As Exception
+			Do
+				Application.DoEvents()
+			Loop Until weitergehts = True
+		Catch ex As Exception
 
-        End Try
+		End Try
 
-    End Sub
+	End Sub
 
-    Private Sub warten()
-        Do
-            Thread.Sleep(ms)
-            weitergehts = True
-        Loop Until weitergehts = True
-    End Sub
+	Public Sub warten()
+		Do
+
+			If Downloads.Aktelle_Downloads < Main.max_Downloads Then
+				weitergehts = True
+			End If
+
+			Thread.Sleep(ms)
+			weitergehts = True
+		Loop Until weitergehts = True
+	End Sub
 
     Private Sub Download_Manager_FormClosing(sender As Object, e As FormClosingEventArgs) Handles Me.FormClosing
         Main.Speicherort.Enabled = True
@@ -466,36 +471,28 @@ Public Class Download_Manager
         End If
     End Sub
 
-    Private Sub download_Click(sender As Object, e As EventArgs) Handles download.Click
-
-        SyncLock Main.lock
-            For i = 0 To DL_Listview.CheckedIndices.Count - 1
-                With DL_Listview.Items
-                    download_active = True
-                    If DL_Listview.Items.Contains(.Item(i)) Then
-                        If .Item(i).SubItems(3).Text = "Bereit" Then
-                            If Downloads.Aktelle_Downloads < Main.max_Downloads Then
-                                .Item(i).SubItems(3).Text = "Downloaden"
-
-                                If .Item(i).SubItems(5).Text = "audio/mpeg" Then
-
-                                    Downloads.Add_Download(.Item(i).SubItems(4).Text, Main.Dlpath & .Item(i).SubItems(0).Text & ".mp3", DL_Listview.CheckedIndices.Item(i))
-                                ElseIf .Item(i).SubItems(5).Text = "video/mp4" Then
-                                    Downloads.Add_Download(.Item(i).SubItems(4).Text, Main.Dlpath & .Item(i).SubItems(0).Text & ".mp4", DL_Listview.CheckedIndices.Item(i))
-                                Else
-                                    Downloads.Add_Download(.Item(i).SubItems(4).Text, Main.Dlpath & .Item(i).SubItems(0).Text, DL_Listview.CheckedIndices.Item(i))
-                                End If
-                            Else
-                                i = i - 1
-                                wartezeit(1)
-                            End If
-                        End If
-                    End If
-                End With
-            Next
-        End SyncLock
-        download_active = False
-    End Sub
+Private Sub download_Click(sender As Object, e As EventArgs) Handles download.Click
+		SyncLock Main.lock
+			For i = 0 To DL_Listview.CheckedIndices.Count - 1
+				With DL_Listview.Items
+					If .Item(i).SubItems(3).Text <> "Fertig" Then
+						If Downloads.Aktelle_Downloads < Main.max_Downloads Then
+							If .Item(i).SubItems(5).Text = "audio/mpeg" Then
+								Downloads.Add_Download(.Item(i).SubItems(4).Text, Main.Dlpath & .Item(i).SubItems(0).Text & ".mp3", DL_Listview.CheckedIndices.Item(i))
+							ElseIf .Item(i).SubItems(5).Text = "video/mp4" Then
+								Downloads.Add_Download(.Item(i).SubItems(4).Text, Main.Dlpath & .Item(i).SubItems(0).Text & ".mp4", DL_Listview.CheckedIndices.Item(i))
+							Else
+								Downloads.Add_Download(.Item(i).SubItems(4).Text, Main.Dlpath & .Item(i).SubItems(0).Text, DL_Listview.CheckedIndices.Item(i))
+							End If
+						Else
+							i = i - 1
+							wartezeit(1)
+						End If
+					End If
+				End With
+			Next
+		End SyncLock
+	End Sub
 
     Private Sub cancel_all_downloads_Click_1(sender As Object, e As EventArgs) Handles cancel_all_downloads.Click
         Downloads.Cancel()

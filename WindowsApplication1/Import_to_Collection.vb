@@ -1,5 +1,5 @@
 ﻿Imports System.IO
-
+Imports System.Threading
 
 Public Class ImportTo_Collection
     Public WithEvents Importer As New MediaImporter
@@ -8,13 +8,55 @@ Public Class ImportTo_Collection
     Dim skip_existing_files As Boolean = True
     Dim lock As New Object
     Public _root As String = ""
-    Dim _size As Integer = 0
+	Dim _size As Integer = 0
+	Dim _converter As New convert
     Dim _klammern_ignorieren As Boolean = False
     Dim _abort_Progress As Boolean = False
-    Dim _duplicates As Integer = 0
-    Dim copied As Integer = 0
+	Dim _duplicates As Integer = 0
+	Dim adjustNoiseandrate As Boolean = True
+	Public weitergehts As Boolean = True
+	Public curconvert_count As Integer = 0
+	Dim ms As Integer = 1
+	Dim copied As Integer = 0
     Public filcount As Integer = 0
     Dim _ablage As String = ""
+
+	Public Sub wartezeit(ByVal sekunden As Integer)
+		Try
+			ms = sekunden * 1000
+			weitergehts = False
+
+			Dim t As Thread = New Thread(AddressOf warten)
+
+			t.IsBackground = True
+			t.Start()
+
+			Do
+				Application.DoEvents()
+
+				If curconvert_count < 1 Then
+					weitergehts = True
+					Exit Do
+				End If
+			Loop Until weitergehts = True
+		Catch ex As Exception
+
+		End Try
+
+	End Sub
+
+	Public Sub warten()
+		Do
+			If curconvert_count < 1 Then
+				weitergehts = True
+				Exit Do
+			Else
+				weitergehts = False
+			End If
+
+			Thread.Sleep(MS)
+		Loop Until weitergehts = True
+	End Sub
 
 
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
@@ -29,7 +71,7 @@ Public Class ImportTo_Collection
         CheckBox1.Enabled = False
         CheckBox2.Enabled = False
         CheckBox3.Enabled = False
-
+		CheckBox4.Enabled = False
         ListView1.Enabled = False
 
         If Import_BGW.IsBusy = False Then
@@ -70,7 +112,7 @@ Public Class ImportTo_Collection
             .Add(CStr(ListView1.Items.Count + 1))
             .Add(Entry.Source)
             .Add(Entry.Size)
-            .Add(Entry.targetfilename)
+			.Add(Main.Collections.Aktuelle_Sammlung.Path)
             .Add(Entry.Duration)
             .Add(Entry.Bitrate.ToString)
             .Add(CStr(Entry.SamplingRate))
@@ -229,7 +271,7 @@ Public Class ImportTo_Collection
                             _srcpath = fbd.SelectedPath
                         End If
 
-                        Dim _dirinfo As New DirectoryInfo(CType(_srcpath, String))
+						Dim _dirinfo As New DirectoryInfo(_srcpath)
 
                         For Each fil As FileInfo In _dirinfo.GetFiles("*.mp3", SearchOption.AllDirectories)
                             If fil.Exists = True Then
@@ -280,6 +322,7 @@ Public Class ImportTo_Collection
         Dim Files_to_copy As Integer = 0
         Dim target As String = ""
         Dim DirName As String = ""
+		Dim cur_convertingfile_count = 0
 
         If Not _root.Length > 1 Then
             e.Cancel = True
@@ -289,46 +332,67 @@ Public Class ImportTo_Collection
             If Importer.filestoimport.Count > 0 Then
                 With Importer.filestoimport
                     SyncLock Main.lock
-                        For i As Integer = 0 To .Count - 1 Step 1
-                            If Importer.filestoimport.Item(i) IsNot Nothing Then
-                                If .Item(i).BadHeader = False AndAlso .Item(i).Duplicate = False AndAlso .Item(i).selected = True Then
-                                    If .Item(i).Artist.Length > 1 Then
-                                        If .Item(i).Artist.ToLower.Contains("&") Or .Item(i).Artist.ToLower.Contains("feat") Or .Item(i).Artist.ToLower.Contains("vs") Then
-                                            DirName = Trim(Main.CleanReplace.replacechars(Main.CleanReplace.replacechars(.Item(i).Artist, "name", CheckBox3.Checked), "Target-Directory_only", CheckBox3.Checked))
-                                        Else
-                                            DirName = Trim(Main.CleanReplace.replacechars(.Item(i).Artist, "name", CheckBox3.Checked))
-                                        End If
+						For i As Integer = 0 To .Count - 1 Step 1
+							If weitergehts = False AndAlso curconvert_count = 1 AndAlso adjustNoiseandrate = True Then
+								i = i - 1
+								wartezeit(1)
+							Else
+								Try
+									If Importer.filestoimport.Item(i) IsNot Nothing Then
+										If .Item(i).BadHeader = False AndAlso .Item(i).Duplicate = False AndAlso .Item(i).selected = True Then
+											If .Item(i).Artist.Length > 1 Then
+												If .Item(i).Artist.ToLower.Contains("&") Or .Item(i).Artist.ToLower.Contains("feat") Or .Item(i).Artist.ToLower.Contains("vs") Then
+													DirName = Trim(Main.CleanReplace.replacechars(Main.CleanReplace.replacechars(.Item(i).Artist, "name", CheckBox3.Checked), "Target-Directory_only", CheckBox3.Checked))
+												Else
+													DirName = Trim(Main.CleanReplace.replacechars(.Item(i).Artist, "name", CheckBox3.Checked))
+												End If
 
-                                        If Not Directory.Exists(_root & DirName) Then
-                                            Directory.CreateDirectory(_root & DirName)
-                                        End If
+												If Not Directory.Exists(_root & DirName) Then
+													Directory.CreateDirectory(_root & DirName)
+												End If
 
-                                        If .Item(i).Title.Length < 1 Or .Item(i).Artist.Length < 2 Then
-                                            target = _root & DirName & "\" & Replace(Mid(target, target.LastIndexOf("\") + 1), ".mp3", "") & ".mp3"
-                                        Else
-                                            target = Replace(Main.FileIO.TestFileName(_root & DirName & "\" & .Item(i).Artist & " - " & .Item(i).Title & ".mp3"), ".mp3", "") & ".mp3"
-                                        End If
+												If .Item(i).Title.Length < 1 Or .Item(i).Artist.Length < 2 Then
+													target = _root & DirName & "\" & Replace(Mid(target, target.LastIndexOf("\") + 1), ".mp3", "") & ".mp3"
+												Else
+													target = Replace(Main.FileIO.TestFileName(_root & DirName & "\" & .Item(i).Artist & " - " & .Item(i).Title & ".mp3"), ".mp3", "") & ".mp3"
+												End If
 
-                                        If move_instead_of_copy = False Then
-                                            If Main.FileIO.Copy(.Item(i).Source, target, Replace_Files) = True Then
-                                                Import_BGW.ReportProgress(i, "[" & i & "] kopiere " & Chr(34) & .Item(i).Source & Chr(34) & " als " & Chr(34) & .Item(i).Artist & " - " & .Item(i).Title & ".mp3" & Chr(34) & " in die Sammlung...")
-                                                copied = copied + 1
-                                            End If
-                                        Else
-                                            If Main.FileIO.Move(.Item(i).Source, Main.FileIO.TestFileName(target)) = True Then
-                                                Import_BGW.ReportProgress(i, "[" & i & "] verschiebe " & Chr(34) & .Item(i).Source & Chr(34) & " als " & Chr(34) & .Item(i).Artist & " - " & .Item(i).Title & ".mp3" & Chr(34) & " in die Sammlung...")
-                                                copied = copied + 1
-                                            End If
-                                        End If
-                                    End If
-                                End If
-                            End If
-                        Next
+												If adjustNoiseandrate = True AndAlso .Item(i).Bitrate = CDbl(Main.MP3_Bitrate) AndAlso weitergehts = True AndAlso curconvert_count = 0 Then
+													curconvert_count = 1
+													Main.converter.convertToMP3(.Item(i).Source, target, Main.MP3_Bitrate, 0)
+													Import_BGW.ReportProgress(i, "[" & i & "] bearbeite " & Chr(34) & .Item(i).Source & Chr(34) & " als " & Chr(34) & .Item(i).Artist & " - " & .Item(i).Title & ".mp3" & Chr(34) & " in die Sammlung...")
+												Else
+													If weitergehts = False Then
+														i = i - 1
+														wartezeit(1)
+													Else
+
+														If move_instead_of_copy = False Then
+															If Main.FileIO.Copy(.Item(i).Source, target, Replace_Files) = True Then
+																Import_BGW.ReportProgress(i, "[" & i & "] kopiere " & Chr(34) & .Item(i).Source & Chr(34) & " als " & Chr(34) & .Item(i).Artist & " - " & .Item(i).Title & ".mp3" & Chr(34) & " in die Sammlung...")
+																copied = copied + 1
+															End If
+														Else
+															If Main.FileIO.Move(.Item(i).Source, Main.FileIO.TestFileName(target)) = True Then
+																Import_BGW.ReportProgress(i, "[" & i & "] verschiebe " & Chr(34) & .Item(i).Source & Chr(34) & " als " & Chr(34) & .Item(i).Artist & " - " & .Item(i).Title & ".mp3" & Chr(34) & " in die Sammlung...")
+																copied = copied + 1
+															End If
+														End If
+													End If
+												End If
+											End If
+										End If
+									End If
+								Catch ex As UnauthorizedAccessException
+									Main.Eventlog.AddEvent("Konverter", EventType.Exception, "(" & target & "): " & ex.Message)
+								End Try
+							End If
+						Next
                     End SyncLock
                 End With
             End If
         Else
-            MsgBox("Vorgang abgebrochen, es wurde keine Sammlung gefunden!", MsgBoxStyle.Critical)
+			Main.Eventlog.AddEvent("Konverter", EventType.Exception, "Vorgang abgebrochen, es wurde keine Sammlung gefunden!")
         End If
     End Sub
 
@@ -386,7 +450,7 @@ Public Class ImportTo_Collection
                         If entry.Source = .SubItems(3).Text AndAlso entry.Artist = .Text Then
                             entry.Title = .SubItems(1).Text
 
-                            entry.targetfilename = Main.FileIO.TestFileName(_root & entry.Artist & " - " & entry.Title & ".mp3")
+							entry.targetfilename = Main.FileIO.TestFileName(Main.Collections.Aktuelle_Sammlung.Path & entry.Artist & " - " & entry.Title & ".mp3")
 
                             If Not File.Exists(entry.targetfilename) Then
                                 .BackColor = Color.SkyBlue
@@ -535,7 +599,7 @@ Public Class ImportTo_Collection
                         For Each item As MP3File In Importer.filestoimport
                             If item.Artist = .Text AndAlso .SubItems(1).Text = item.Title Then
                                 item.Source = Trim(.SubItems(3).Text)
-                                item.targetfilename = Main.FileIO.TestFileName(_root & item.Artist & " - " & item.Title & ".mp3")
+								item.targetfilename = Main.FileIO.TestFileName(Main.Collections.Aktuelle_Sammlung.Path & item.Artist & " - " & item.Title & ".mp3")
 
                                 If Not File.Exists(item.targetfilename) Then
                                     .BackColor = Color.SkyBlue
@@ -597,7 +661,7 @@ Public Class ImportTo_Collection
                             For Each entry As MP3File In Importer.filestoimport
                                 If entry.Title = .SubItems(1).Text AndAlso entry.Source = .SubItems(3).Text Then
                                     entry.Artist = .Text
-                                    entry.targetfilename = Main.FileIO.TestFileName(_root & entry.Artist & " - " & entry.Title & ".mp3")
+									entry.targetfilename = Main.FileIO.TestFileName(Main.Collections.Aktuelle_Sammlung.Path & entry.Artist & " - " & entry.Title & ".mp3")
 
                                     If Not File.Exists(entry.targetfilename) Then
                                         entry.targetfilename = .SubItems(5).Text
@@ -635,7 +699,7 @@ Public Class ImportTo_Collection
                         .Start()
                     End With
                 Else
-                    Throw New FileNotFoundException("Die Datei existeirt nicht!")
+					Throw New FileNotFoundException("Die Datei existiert nicht!")
                 End If
             End If
         Catch ex As Exception
@@ -702,7 +766,6 @@ Public Class ImportTo_Collection
         End If
     End Sub
 
-
     Private Sub _listfiles(count As Integer)
         If Not Listing_BGW.IsBusy Then
             ToolStripProgressBar1.Maximum = Importer.filestoimport.Count
@@ -711,14 +774,11 @@ Public Class ImportTo_Collection
             Main.Eventlog.AddEvent("Importer", EventType.information, "Auflisten der Dateien...")
             Listing_BGW.RunWorkerAsync()
         End If
-
-       
     End Sub
 
     Private Sub _Importer_Exception(ex As String, type As Integer)
         Main.Eventlog.AddEvent("Importer", CType(type, EventType), ex)
     End Sub
-
 
     Delegate Sub delegated_Importer_exception(ex As String, type As Integer)
 
@@ -730,15 +790,14 @@ Public Class ImportTo_Collection
         End If
     End Sub
 
+	Private Sub Importer_ProvessChanged(f As String, count As Integer, ByVal type As Integer) Handles Importer.ProgessChanged
+		If Me.InvokeRequired Then
+			Me.Invoke(New delegated_importer_report(AddressOf importer_report), f, count, type)
+		Else
+			importer_report(f, count, type)
+		End If
 
-    Private Sub Importer_ProvessChanged(f As String, count As Integer, ByVal type As Integer) Handles Importer.ProvessChanged
-        If Me.InvokeRequired Then
-            Me.Invoke(New delegated_importer_report(AddressOf importer_report), f, count, type)
-        Else
-            importer_report(f, count, type)
-        End If
-
-    End Sub
+	End Sub
 
     Delegate Sub delegated_importer_report(f As String, count As Integer, type As Integer)
 
@@ -748,7 +807,7 @@ Public Class ImportTo_Collection
                 ToolStripProgressBar1.Value = ToolStripProgressBar1.Value + 1
 
                 If count = CInt(Importer.filestoread / 2) Then
-                    Main.Eventlog.AddEvent("Importer", CType(type, EventType), "[Heartbeat]... Die Hälfte der zu lesenden Dateien wurde eingelesen...")
+					Main.Eventlog.AddEvent("Importer", CType(type, EventType), "[Heartbeat]... Die hälfte der zu lesenden Dateien wurde eingelesen...")
                 Else
                     If type > 1 Then
                         Main.Eventlog.AddEvent("Importer", CType(type, EventType), "[" & count.ToString & "] Datei einlesen: " & f)
@@ -797,7 +856,7 @@ Public Class ImportTo_Collection
                     If entry IsNot Nothing Then
                         If entry.Source = .SubItems(3).Text AndAlso entry.Size = .SubItems(4).Text Then
                             entry.Title = .SubItems(1).Text
-                            entry.targetfilename = Main.FileIO.TestFileName(_root & entry.Artist & " - " & entry.Title & ".mp3")
+							entry.targetfilename = Main.FileIO.TestFileName(Main.Collections.Aktuelle_Sammlung.Path & entry.Artist & " - " & entry.Title & ".mp3")
 
                             If Not File.Exists(entry.targetfilename) Then
                                 .BackColor = Color.SkyBlue
@@ -832,7 +891,7 @@ Public Class ImportTo_Collection
                     If entry.Source = .SubItems(3).Text AndAlso entry.Size = .SubItems(4).Text Then
                         entry.Title = .SubItems(1).Text
                         entry.Artist = .Text
-                        entry.targetfilename = Main.FileIO.TestFileName(_root & entry.Artist & " - " & entry.Title & ".mp3")
+						entry.targetfilename = Main.FileIO.TestFileName(Main.Collections.Aktuelle_Sammlung.Path & entry.Artist & " - " & entry.Title & ".mp3")
 
                         If Not File.Exists(entry.targetfilename) Then
                             .BackColor = Color.SkyBlue
@@ -867,7 +926,7 @@ Public Class ImportTo_Collection
                         If entry.Source = .SubItems(3).Text AndAlso entry.Size = .SubItems(4).Text Then
                             entry.Title = .SubItems(1).Text
                             entry.Artist = .Text
-                            entry.targetfilename = Main.FileIO.TestFileName(_root & entry.Artist & " - " & entry.Title & ".mp3")
+							entry.targetfilename = Main.FileIO.TestFileName(Main.Collections.Aktuelle_Sammlung.Path & entry.Artist & " - " & entry.Title & ".mp3")
 
                             If Not File.Exists(entry.targetfilename) Then
                                 .BackColor = Color.SkyBlue
@@ -902,7 +961,7 @@ Public Class ImportTo_Collection
                             For Each entry In Importer.filestoimport
                                 If entry.Title = .SubItems(1).Text AndAlso .SubItems(3).Text.ToLower = entry.Source.ToLower Then
                                     entry.Artist = .Text
-                                    entry.targetfilename = Main.FileIO.TestFileName(_root & entry.Artist & " - " & entry.Title & ".mp3")
+									entry.targetfilename = Main.FileIO.TestFileName(Main.Collections.Aktuelle_Sammlung.Path & entry.Artist & " - " & entry.Title & ".mp3")
 
                                     If Not File.Exists(entry.targetfilename) Then
                                         .BackColor = Color.SkyBlue
@@ -926,7 +985,7 @@ Public Class ImportTo_Collection
                             For Each entry In Importer.filestoimport
                                 If entry.Artist = .Text AndAlso .SubItems(3).Text.ToLower = entry.Source.ToLower Then
                                     entry.Title = .SubItems(1).Text
-                                    entry.targetfilename = Main.FileIO.TestFileName(_root & entry.Artist & " - " & entry.Title & ".mp3")
+									entry.targetfilename = Main.FileIO.TestFileName(Main.Collections.Aktuelle_Sammlung.Path & entry.Artist & " - " & entry.Title & ".mp3")
 
                                     If Not File.Exists(entry.targetfilename) Then
                                         .BackColor = Color.SkyBlue
@@ -1008,17 +1067,17 @@ Public Class ImportTo_Collection
             With ListView1.FocusedItem
                 Try
                     If File.Exists(.SubItems(3).Text) Then
-                        If MsgBox("Sie sind im Begriff, eine Datei aus der Quelle zu löschen, wenn die Quelle nicht in ihrem Beitz ist, so fragen sie bitte den Sammlungsinhaber um Erlaubnis!", MsgBoxStyle.YesNo) = MsgBoxResult.Yes Then
-                            For Each entry As MP3File In Importer.filestoimport
-                                If entry IsNot Nothing Then
-                                    If entry.Source = .SubItems(3).Text AndAlso entry.Size = .SubItems(4).Text Then
-                                        File.Delete(.SubItems(3).Text)
-                                        .Remove()
-                                        Exit For
-                                    End If
-                                End If
-                            Next
-                        End If
+						If MsgBox("Sie sind im Begriff, eine Datei aus der Quelle zu löschen, wenn die Quelle nicht in ihrem Besitz ist, so fragen sie bitte den Sammlungsinhaber um Erlaubnis!", MsgBoxStyle.YesNo) = MsgBoxResult.Yes Then
+							For Each entry As MP3File In Importer.filestoimport
+								If entry IsNot Nothing Then
+									If entry.Source = .SubItems(3).Text AndAlso entry.Size = .SubItems(4).Text Then
+										File.Delete(.SubItems(3).Text)
+										.Remove()
+										Exit For
+									End If
+								End If
+							Next
+						End If
                     End If
                 Catch ex As Exception
                     Main.Eventlog.AddEvent("Importer", EventType.Exception, ex.Message)
@@ -1030,5 +1089,9 @@ Public Class ImportTo_Collection
     Private Sub CheckBox4_CheckedChanged(sender As Object, e As EventArgs) Handles donotcleanup.CheckedChanged
         Importer.ignoreprotectedfiles = donotcleanup.Checked
     End Sub
+
+	Private Sub CheckBox4_CheckedChanged_1(sender As Object, e As EventArgs) Handles CheckBox4.CheckedChanged
+		adjustNoiseandrate = CheckBox4.Checked
+	End Sub
 End Class
 

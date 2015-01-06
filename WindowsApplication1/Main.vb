@@ -1,9 +1,10 @@
 ﻿Imports System.Net
+Imports System.IO
 
 Public Class Main
     Public Event status(ByVal message As String)
 
-    Public CleanReplace As New CleanReplace()
+	Public CleanReplace As New CleanReplace
     Public WithEvents FileIO As New YTFileIO
     Public Collections As New Collections
     Public WithEvents Eventlog As New EventLog
@@ -17,7 +18,7 @@ Public Class Main
     Public lock As New Object
     Public Application_Directory As String = My.Application.Info.DirectoryPath
     Public Dlpath As String = Application_Directory & "\Downloads\"
-    Public MP3_Bitrate As String = "192"
+	Public MP3_Bitrate As Integer = 128
     Public MP3_samprate As String = "44100"
 
     Public sortbyartist As Boolean = False
@@ -25,31 +26,31 @@ Public Class Main
     Public cleanup_on_close As Boolean = False
     Public write_short_Header As Boolean = True
 
-    Public audio_volume As String = "89"
+	Public audio_volume As String = "96"
     Public max_Downloads As Integer = 3
     Public min_contentlength As String = "1.9"
     Public max_contentlength As String = "200.9"
     Public canceling As Boolean = False
 
     Private Sub Main_FormClosing(sender As Object, e As FormClosingEventArgs) Handles Me.FormClosing
-        If System.IO.File.Exists(path_to_config) Then
-            Collections.Save_Collections()
-            Save_Extensioninfos()
-            CleanReplace.SaveRulelist3()
+		If File.Exists(path_to_config) Then
+			Collections.Save_Collections()
+			Save_Extensioninfos()
+			CleanReplace.SaveRulelist3()
 
-            INIDatei.WertSchreiben("Settings", "MP3_Bitrate", MP3_Bitrate)
-            INIDatei.WertSchreiben("Settings", "MP3_Sampling", MP3_samprate)
+			INIDatei.WertSchreiben("Settings", "MP3_Bitrate", CStr(MP3_Bitrate))
+			INIDatei.WertSchreiben("Settings", "MP3_Sampling", MP3_samprate)
 
-            If Dlpath <> Application_Directory & "\Downloads" Then
-                INIDatei.WertSchreiben("Main", "DownloadPath", Dlpath)
-            End If
+			If Dlpath <> Application_Directory & "\Downloads" Then
+				INIDatei.WertSchreiben("Main", "DownloadPath", Dlpath)
+			End If
 
-            If settings.detect_by_artist.Checked = True Then
-                INIDatei.WertSchreiben("Settings", "DetectMethod", "2")
-            Else
-                INIDatei.WertSchreiben("Settings", "DetectMethod", "1")
-            End If
-        End If
+			If settings.detect_by_artist.Checked = True Then
+				INIDatei.WertSchreiben("Settings", "DetectMethod", "2")
+			Else
+				INIDatei.WertSchreiben("Settings", "DetectMethod", "1")
+			End If
+		End If
 
         cleanup()
 
@@ -64,54 +65,54 @@ Public Class Main
 
         Me.Location = New Point(1, 1)
 
-        If Not System.IO.Directory.Exists(Application_Directory & "\Tools") Then
-            Try
-                System.IO.Directory.CreateDirectory(Application_Directory & "\Tools")
-                HAVE_TOOLS_DIR = True
-            Catch ex As Exception
-                MsgBox(ex.Message, MsgBoxStyle.Critical)
-                Application.Exit()
-            End Try
-        Else
-            HAVE_TOOLS_DIR = True
-        End If
+		If Not Directory.Exists(Application_Directory & "\Tools") Then
+			Try
+				Directory.CreateDirectory(Application_Directory & "\Tools")
+				HAVE_TOOLS_DIR = True
+			Catch ex As Exception
+				MsgBox(ex.Message, MsgBoxStyle.Critical)
+				Application.Exit()
+			End Try
+		Else
+			HAVE_TOOLS_DIR = True
+		End If
 
-        If System.IO.File.Exists(Application_Directory & "\config.ini") Then
-            path_to_config = Application_Directory & "\config.ini"
-            HAVE_CONFIG_FILE = True
-        Else
+		If File.Exists(Application_Directory & "\config.ini") Then
+			path_to_config = Application_Directory & "\config.ini"
+			HAVE_CONFIG_FILE = True
+		Else
 
-            Dim _result As MsgBoxResult
+			Dim _result As MsgBoxResult
 
-            _result = MsgBox("Es existiert keine Konfiguration, möchten sie eine andere auswählen?", MsgBoxStyle.YesNoCancel)
+			_result = MsgBox("Es existiert keine Konfiguration, möchten sie eine andere auswählen?", MsgBoxStyle.YesNoCancel)
 
-            If _result = MsgBoxResult.Yes Then
-                Dim ofd As New OpenFileDialog()
+			If _result = MsgBoxResult.Yes Then
+				Dim ofd As New OpenFileDialog()
 
-                With ofd
-                    .CheckFileExists = True
-                    .CheckPathExists = True
-                    .Multiselect = False
-                    .ShowReadOnly = True
-                    .Title = "Bitte wählen sie die Konfiguration..."
-                    .Filter = "config.ini|config.ini"
-                End With
+				With ofd
+					.CheckFileExists = True
+					.CheckPathExists = True
+					.Multiselect = False
+					.ShowReadOnly = True
+					.Title = "Bitte wählen sie die Konfiguration..."
+					.Filter = "config.ini|config.ini"
+				End With
 
-                If ofd.ShowDialog = Windows.Forms.DialogResult.OK Then
-                    path_to_config = ofd.FileName
-                    HAVE_CONFIG_FILE = True
-                Else
-                    HAVE_CONFIG_FILE = False
-                End If
-            ElseIf _result = MsgBoxResult.No Then
-                path_to_config = Application_Directory & "\config.ini"
-                INIDatei.Pfad = path_to_config
-                System.IO.File.WriteAllText(path_to_config, "[Main]" & vbCrLf & vbCrLf & "[Settings]")
-                HAVE_CONFIG_FILE = True
-            Else
-                HAVE_CONFIG_FILE = False
-            End If
-        End If
+				If ofd.ShowDialog = Windows.Forms.DialogResult.OK Then
+					path_to_config = ofd.FileName
+					HAVE_CONFIG_FILE = True
+				Else
+					HAVE_CONFIG_FILE = False
+				End If
+			ElseIf _result = MsgBoxResult.No Then
+				path_to_config = Application_Directory & "\config.ini"
+				INIDatei.Pfad = path_to_config
+				File.WriteAllText(path_to_config, "[Main]" & vbCrLf & vbCrLf & "[Settings]")
+				HAVE_CONFIG_FILE = True
+			Else
+				HAVE_CONFIG_FILE = False
+			End If
+		End If
 
         If HAVE_CONFIG_FILE = True Then
             INIDatei.Pfad = path_to_config
@@ -132,12 +133,12 @@ Public Class Main
             _tmp = INIDatei.WertLesen("Settings", "MP3_Bitrate", "192")
 
             If _tmp IsNot Nothing Then
-                MP3_Bitrate = _tmp
+				MP3_Bitrate = CInt(_tmp)
             Else
-                MP3_Bitrate = "192"
+				MP3_Bitrate = 128
             End If
 
-            settings.audio_bitrate.Text = MP3_Bitrate
+			settings.audio_bitrate.Text = CStr(MP3_Bitrate)
 
             _tmp = INIDatei.WertLesen("Settings", "MP3_Sampling", "44100")
 
@@ -151,11 +152,7 @@ Public Class Main
 
             _tmp = INIDatei.WertLesen("Settings", "UserAgent", "")
 
-            If _tmp IsNot Nothing Then
-                'Download._useragent = _tmp
-            End If
-
-            Collections.Load_collections()
+			Collections.Load_collections()
 
             If Collections.Count < 1 Then
                 Collections.Add()
@@ -173,33 +170,33 @@ Public Class Main
 
             Dlpath = Replace(Dlpath, "\\", "\")
 
-            If Not System.IO.Directory.Exists(Dlpath) Then
-                Try
-                    System.IO.Directory.CreateDirectory(Dlpath)
-                Catch ex As Exception
-                    Dlpath = Application_Directory & "\Downloads\"
-                End Try
+			If Not Directory.Exists(Dlpath) Then
+				Try
+					Directory.CreateDirectory(Dlpath)
+				Catch ex As Exception
+					Dlpath = Application_Directory & "\Downloads\"
+				End Try
 
-            End If
+			End If
 
-            If System.IO.File.Exists(My.Application.Info.DirectoryPath & "\clean_replace.ini") Then
-                With CleanReplace
-                    .Loadruleset()
-                    .Loadruleset2()
-                    .Loadruleset3()
+			If File.Exists(My.Application.Info.DirectoryPath & "\clean_replace.ini") Then
+				With CleanReplace
+					.Loadruleset()
+					.Loadruleset2()
+					.Loadruleset3()
 
-                    If System.IO.Directory.Exists(Collections.Aktuelle_Sammlung.Path) Then
-                        If settings.artist_pattern_list.Items.Count = 0 Then
-                            .training()
-                            .SaveRulelist3()
-                        End If
-                    End If
-                End With
-            Else
-                System.IO.File.WriteAllText(My.Application.Info.DirectoryPath & "\clean_replace.ini", "[info]" & vbCrLf & "count=0" & vbCrLf & "tp_count=0" & vbCrLf & "ap_count=0" & vbCrLf & vbCrLf & "[ruleset]" & vbCrLf & vbCrLf & "[ap_ruleset]" & vbCrLf & vbCrLf & "[tp_ruleset]" & vbCrLf)
-            End If
+					If Directory.Exists(Collections.Aktuelle_Sammlung.Path) Then
+						If settings.artist_pattern_list.Items.Count = 0 Then
+							.training()
+							.SaveRulelist3()
+						End If
+					End If
+				End With
+			Else
+				File.WriteAllText(My.Application.Info.DirectoryPath & "\clean_replace.ini", "[info]" & vbCrLf & "count=0" & vbCrLf & "tp_count=0" & vbCrLf & "ap_count=0" & vbCrLf & vbCrLf & "[ruleset]" & vbCrLf & vbCrLf & "[ap_ruleset]" & vbCrLf & vbCrLf & "[tp_ruleset]" & vbCrLf)
+			End If
         Else
-            MP3_Bitrate = "192"
+			MP3_Bitrate = 128
             MP3_samprate = "44100"
             settings.detect_by_artist.Checked = True
             Dlpath = Application_Directory & "\Downloads\"
@@ -213,33 +210,29 @@ Public Class Main
         If HAVE_CONFIG_FILE = True AndAlso HAVE_TOOLS_DIR = True Then
             Load_Extensioninfos()
 
+			If Not File.Exists(converter.konverter_path) AndAlso Not File.Exists(Dlpath & "\ffmpeg-latest-win32-static.7z") Then
+				MsgBox("Der FFMPEG-Konverter wurde in den Download-Manager eingereiht!, laden sie die Datei herunter und entpacken sie die Datei ""ffmpeg.exe"" nach """ & converter.konverter_path & """ ab und starte YT-Get neu!", MsgBoxStyle.Exclamation)
 
+				With Download_Manager
+					.MdiParent = Me
+					.Width = CInt((Me.Width / 2))
+					.Height = CInt((Me.Height / 2))
+					.Show()
 
-            If Not System.IO.File.Exists(converter.konverter_path) Then
-                If Not System.IO.File.Exists(Dlpath & "\ffmpeg-latest-win32-static.7z") Then
-                    MsgBox("Der FFMPEG-Konverter wurde in den Download-Manager eingereiht!, laden sie die Datei herunter und entpacken sie die Datei ""ffmpeg.exe"" nach """ & converter.konverter_path & """ ab und starte YT-Get neu!", MsgBoxStyle.Exclamation)
+					.movie_url.Text = "http://ffmpeg.zeranoe.com/builds/win32/static/ffmpeg-latest-win32-static.7z"
+					.Add_URL.Enabled = True
+					.Add_URL.PerformClick()
 
-                    With Download_Manager
-                        .MdiParent = Me
-                        .Width = CInt((Me.Width / 2))
-                        .Height = CInt((Me.Height / 2))
-                        .Show()
+					If .DL_Listview.Items.Count > 0 Then
+						.download.Enabled = True
+						.download.PerformClick()
+					End If
 
-                        .movie_url.Text = "http://ffmpeg.zeranoe.com/builds/win32/static/ffmpeg-latest-win32-static.7z"
-                        .Add_URL.Enabled = True
-                        .Add_URL.PerformClick()
-
-                        If .DL_Listview.Items.Count > 0 Then
-                            .download.Enabled = True
-                            .download.PerformClick()
-                        End If
-
-                    End With
-                Else
-                    MsgBox("Entpacken sie die heruntergeladene Datei "" ffmpeg-latest-win32-static.7z "", danach kopieren sie die Datei ""ffmpeg.exe"" nach """ & converter.konverter_path & """ und starte YT-Get neu!", MsgBoxStyle.Exclamation)
-                End If
-            End If
-        End If
+				End With
+			Else
+				MsgBox("Entpacken sie die heruntergeladene Datei "" ffmpeg-latest-win32-static.7z "", danach kopieren sie die Datei ""ffmpeg.exe"" nach """ & converter.konverter_path & """ und starte YT-Get neu!", MsgBoxStyle.Exclamation)
+			End If
+		End If
 
         If Speicherort.Text = "" Then
             Application.Exit()
@@ -264,26 +257,18 @@ Public Class Main
             NotifyIcon1.Visible = False
         End If
 
-        If ImportTo_Collection.Visible Then
-            If Me.WindowState = FormWindowState.Maximized Then
-                ImportTo_Collection.WindowState = Me.WindowState
-            Else
-                ImportTo_Collection.WindowState = Me.WindowState
-                ImportTo_Collection.Width = CInt((Me.Width / 2))
-                ImportTo_Collection.Height = CInt((Me.Height / 2))
-            End If
-        End If
+		If ImportTo_Collection.Visible And Me.WindowState = FormWindowState.Maximized Then
+			ImportTo_Collection.WindowState = Me.WindowState
+			ImportTo_Collection.Width = CInt((Me.Width / 2))
+			ImportTo_Collection.Height = CInt((Me.Height / 2))
+		End If
 
-        If Download_Manager.Visible = True Then
-            If Me.WindowState = FormWindowState.Maximized Then
-                Download_Manager.WindowState = Me.WindowState
-            Else
-                Download_Manager.WindowState = Me.WindowState
-                Download_Manager.Width = CInt((Me.Width / 2))
-                Download_Manager.Height = CInt((Me.Height / 2))
-            End If
-        End If
-    End Sub
+		If Download_Manager.Visible And Me.WindowState = FormWindowState.Maximized Then
+			Download_Manager.WindowState = Me.WindowState
+			Download_Manager.Width = CInt((Me.Width / 2))
+			Download_Manager.Height = CInt((Me.Height / 2))
+		End If
+	End Sub
 
     Private Sub ImportierenToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ImportierenToolStripMenuItem.Click
         ImportTo_Collection.MdiParent = Me
@@ -299,11 +284,12 @@ Public Class Main
         With p
             .StartInfo.FileName = "explorer.exe"
             .StartInfo.Arguments = Speicherort.Text
-            Try
-                .Start()
-            Catch ex As Exception
-                MsgBox(ex.Message, MsgBoxStyle.Critical, Menu_collections_oeffnen.Text)
-            End Try
+
+			Try
+				.Start()
+			Catch ex As Exception
+				Eventlog.AddEvent("Main", EventType.Exception, ex.Message)
+			End Try
         End With
     End Sub
 
@@ -348,27 +334,27 @@ Public Class Main
     End Sub
 
     Private Sub cleanup()
-        Dim fil As System.IO.FileInfo
+		Dim fil As FileInfo
 
-        If System.IO.Directory.Exists(Dlpath) Then
-            Dim dirinfo As New System.IO.DirectoryInfo(Dlpath)
+		If Directory.Exists(Dlpath) Then
+			Dim dirinfo As New DirectoryInfo(Dlpath)
 
-            For Each File As System.IO.FileInfo In dirinfo.GetFiles("*.flv", System.IO.SearchOption.TopDirectoryOnly)
-                Try
-                    File.Delete()
-                Catch ex As Exception
-                    MsgBox(ex.Message, MsgBoxStyle.Critical, Me.Text)
-                End Try
-            Next
+			For Each File As FileInfo In dirinfo.GetFiles("*.flv", SearchOption.TopDirectoryOnly)
+				Try
+					File.Delete()
+				Catch ex As Exception
+					MsgBox(ex.Message, MsgBoxStyle.Critical, Me.Text)
+				End Try
+			Next
 
-            For Each File As System.IO.FileInfo In dirinfo.GetFiles("*.mp4", System.IO.SearchOption.TopDirectoryOnly)
-                Try
-                    File.Delete()
-                Catch ex As Exception
-                    MsgBox(ex.Message, MsgBoxStyle.Critical, Me.Text)
-                End Try
-            Next
-        End If
+			For Each File As FileInfo In dirinfo.GetFiles("*.mp4", SearchOption.TopDirectoryOnly)
+				Try
+					File.Delete()
+				Catch ex As Exception
+					MsgBox(ex.Message, MsgBoxStyle.Critical, Me.Text)
+				End Try
+			Next
+		End If
     End Sub
 
     Private Sub Speicherort_Click(sender As Object, e As EventArgs) Handles Speicherort.SelectedIndexChanged
@@ -381,50 +367,48 @@ Public Class Main
 
     Public Sub Load_Extensioninfos()
         Try
-            If System.IO.File.Exists(path_to_config) Then
+			If File.Exists(path_to_config) Then
 
-                INIDatei.Pfad = path_to_config
+				INIDatei.Pfad = path_to_config
 
-                Dim rulecount As Integer = 0
-                Dim rule As String
+				Dim rulecount As Integer = 0
+				Dim rule As String
 
-                rulecount = CInt(INIDatei.WertLesen("info", "ext_count"))
+				rulecount = CInt(INIDatei.WertLesen("info", "ext_count"))
 
-                If rulecount > 0 Then
-                    settings.extensions.Items.Clear()
+				If rulecount > 0 Then
+					settings.extensions.Items.Clear()
 
-                    SyncLock lock
-                        For ruleindex As Integer = 0 To rulecount - 1
-                            rule = INIDatei.WertLesen("Extensions", "extension" & CStr(ruleindex))
+					SyncLock lock
+						For ruleindex As Integer = 0 To rulecount - 1
+							rule = INIDatei.WertLesen("Extensions", "extension" & CStr(ruleindex))
 
-                            If rule.Length > 2 Then
-                                If Not settings.extensions.Items.Contains(rule) Then
-                                    settings.extensions.Items.Add(rule)
-                                End If
-                            End If
-                        Next
-                    End SyncLock
-                End If
-            Else
-                Save_Extensioninfos()
-                Load_Extensioninfos()
-            End If
+							If rule.Length > 2 And Not settings.extensions.Items.Contains(rule) Then
+								settings.extensions.Items.Add(rule)
+							End If
+						Next
+					End SyncLock
+				End If
+			Else
+				Save_Extensioninfos()
+				Load_Extensioninfos()
+			End If
         Catch ex As Exception
-
+			Eventlog.AddEvent("Main", EventType.Exception, ex.Message)
         End Try
     End Sub
 
     Public Sub Save_Extensioninfos()
-        If System.IO.File.Exists(path_to_config) Then
-            SyncLock lock
-                INIDatei.SektionLöschen("Extensions")
-                INIDatei.WertSchreiben("info", "ext_count", CStr(settings.extensions.Items.Count))
+		If File.Exists(path_to_config) Then
+			SyncLock lock
+				INIDatei.SektionLöschen("Extensions")
+				INIDatei.WertSchreiben("info", "ext_count", CStr(settings.extensions.Items.Count))
 
-                For i As Integer = 0 To settings.extensions.Items.Count - 1
-                    INIDatei.WertSchreiben("Extensions", "extension" & i, settings.extensions.Items.Item(i).ToString)
-                Next
-            End SyncLock
-        End If
+				For i As Integer = 0 To settings.extensions.Items.Count - 1
+					INIDatei.WertSchreiben("Extensions", "extension" & i, settings.extensions.Items.Item(i).ToString)
+				Next
+			End SyncLock
+		End If
     End Sub
 
     Private Sub BestandslisteErstellenToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles BestandslisteErstellenToolStripMenuItem.Click
