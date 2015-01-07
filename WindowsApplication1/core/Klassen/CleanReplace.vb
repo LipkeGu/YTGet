@@ -416,11 +416,11 @@ Public Class CleanReplace
             For Each fil As FileInfo In _dirinfo.GetFiles("*.mp3", SearchOption.AllDirectories)
                 If fil.Exists = True Then
                     If fil.Name.Contains("-") Then
-                        _tmp = Trim(replacechars(Mid(fil.Name, 1, fil.Name.LastIndexOf("-")), "Target-Filename"))
+						_tmp = Trim(replacechars(Mid(fil.Name, 1, fil.Name.IndexOf("-")), "Target-Filename"))
 
                         If _tmp.Length > 1 AndAlso _tmp.Length > 2 AndAlso _tmp.ToLower <> "unbekannt" AndAlso _tmp.ToLower <> "various artists" Then
                             If Not settings.artist_pattern_list.Items.Contains(_tmp) Then
-                                settings.artist_pattern_list.Items.Add(_tmp)
+								settings.artist_pattern_list.Items.Add(Trim(_tmp))
                             End If
                         End If
                     End If
