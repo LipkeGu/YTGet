@@ -685,12 +685,13 @@ Partial Class settings
 		'audio_bitrate
 		'
 		Me.audio_bitrate.FormattingEnabled = True
-		Me.audio_bitrate.Items.AddRange(New Object() {"32", "40", "64", "80", "96", "112", "128", "160", "192", "224", "256", "320"})
+		Me.audio_bitrate.Items.AddRange(New Object() {"112", "128", "160", "192", "224", "256", "32", "320", "40", "64", "80", "96"})
 		Me.audio_bitrate.Location = New System.Drawing.Point(84, 106)
 		Me.audio_bitrate.Name = "audio_bitrate"
 		Me.audio_bitrate.Size = New System.Drawing.Size(69, 21)
+		Me.audio_bitrate.Sorted = True
 		Me.audio_bitrate.TabIndex = 0
-		Me.audio_bitrate.Text = "192"
+		Me.audio_bitrate.Text = "128"
 		'
 		'title_detection_options
 		'
